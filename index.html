@@ -120,11 +120,14 @@
       border-top: 1px solid var(--line); padding: 8px; display: flex; gap: 8px; justify-content: center;
     }
     .footerNav button { min-height: 42px; padding: 8px 12px; font-size: 13px; }
+
+    .versionBox { padding: 12px; border-radius: 12px; background: #f9fafb; border: 1px solid var(--line); font-size: 14px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
   </style>
 </head>
 <body>
   <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.1</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.3.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -132,10 +135,15 @@
     <button onclick="showHome()">ホーム</button>
     <button onclick="showCurrentOrNew()">進行中</button>
     <button onclick="showCsv()">CSV</button>
+    <button onclick="showSystem()">システム</button>
   </nav>
 
 <script>
 (() => {
+  const APP_VERSION = "1.3.0";
+  const DATA_SCHEMA_VERSION = 2;
+  const KEY_SETTINGS = "sanma_log_pwa_settings";
+  const KEY_BACKUP_PREFIX = "sanma_log_pwa_backup_before_migration_";
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,48000,96000];
   const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
@@ -162,6 +170,129 @@
   function logs() { return load(KEY_LOGS, []); }
   function setSessions(v) { save(KEY_SESSIONS, v); }
   function setLogs(v) { save(KEY_LOGS, v); }
+
+  function settings() { return load(KEY_SETTINGS, {}); }
+  function setSettings(v) { save(KEY_SETTINGS, v); }
+
+  function safeArray(v) { return Array.isArray(v) ? v : []; }
+
+  function normalizeSession(s) {
+    const seats = safeArray(s?.seats);
+    const initial = s?.initialSeats || {};
+    const fallbackSeats = seats.length === 4 ? seats : [
+      initial.east || "",
+      initial.south || "",
+      initial.west || "",
+      initial.north || ""
+    ];
+    const ns = {
+      id: s?.id || id("H"),
+      date: s?.date || today(),
+      seats: fallbackSeats,
+      initialSeats: {
+        east: initial.east || fallbackSeats[0] || "",
+        south: initial.south || fallbackSeats[1] || "",
+        west: initial.west || fallbackSeats[2] || "",
+        north: initial.north || fallbackSeats[3] || ""
+      },
+      current: {
+        field: s?.current?.field || "東場",
+        roundNumber: Number(s?.current?.roundNumber ?? 1),
+        repeatCount: Number(s?.current?.repeatCount ?? 0),
+        dealerIndex: Number(s?.current?.dealerIndex ?? 0)
+      },
+      masudaScorePoint: s?.masudaScorePoint ?? (s?.masudaScoreK == null ? null : Number(s.masudaScoreK) * 1000),
+      masudaScoreK: s?.masudaScoreK ?? (s?.masudaScorePoint == null ? null : Math.round(Number(s.masudaScorePoint) / 1000)),
+      memo: s?.memo ?? "",
+      status: s?.status || "completed",
+      createdAt: s?.createdAt || nowText(),
+      updatedAt: s?.updatedAt || nowText(),
+      appVersion: APP_VERSION,
+      schemaVersion: DATA_SCHEMA_VERSION
+    };
+    return { ...s, ...ns, initialSeats: ns.initialSeats, current: ns.current, seats: ns.seats };
+  }
+
+  function normalizeLog(l) {
+    const point = Number(l?.scoreDeltaPoint ?? 0);
+    const nl = {
+      id: l?.id || id("L"),
+      sessionId: l?.sessionId || "",
+      date: l?.date || today(),
+      roundLabel: l?.roundLabel || "",
+      field: l?.field || "",
+      roundNumber: Number(l?.roundNumber ?? 0),
+      repeatCount: Number(l?.repeatCount ?? 0),
+      dealer: l?.dealer || "",
+      northPlayer: l?.northPlayer || "",
+      participants: safeArray(l?.participants),
+      masudaJoined: Boolean(l?.masudaJoined),
+      skipReason: l?.skipReason || "",
+      resultType: l?.resultType || "",
+      opponent: l?.opponent || "",
+      scoreDeltaPoint: point,
+      scoreDeltaK: l?.scoreDeltaK ?? Math.round(point / 1000),
+      masudaDealer: Boolean(l?.masudaDealer),
+      opponentDealer: Boolean(l?.opponentDealer),
+      stance: l?.stance || "",
+      subjectiveTag: l?.subjectiveTag || "",
+      tenpaiPlayers: safeArray(l?.tenpaiPlayers),
+      createdAt: l?.createdAt || nowText(),
+      appVersion: APP_VERSION,
+      schemaVersion: DATA_SCHEMA_VERSION
+    };
+    return { ...l, ...nl };
+  }
+
+  function createMigrationBackup() {
+    const backup = {
+      createdAt: nowText(),
+      appVersion: APP_VERSION,
+      dataSchemaVersion: DATA_SCHEMA_VERSION,
+      sessions: sessions(),
+      logs: logs(),
+      settings: settings()
+    };
+    const key = KEY_BACKUP_PREFIX + new Date().toISOString().replace(/[:.]/g, "-");
+    save(key, backup);
+    return key;
+  }
+
+  function migrateData({silent=false} = {}) {
+    const beforeSessions = sessions();
+    const beforeLogs = logs();
+    const beforeSettings = settings();
+
+    if (!silent) createMigrationBackup();
+
+    const normalizedSessions = safeArray(beforeSessions).map(normalizeSession);
+    const normalizedLogs = safeArray(beforeLogs).map(normalizeLog);
+
+    setSessions(normalizedSessions);
+    setLogs(normalizedLogs);
+    setSettings({
+      ...beforeSettings,
+      appVersion: APP_VERSION,
+      dataSchemaVersion: DATA_SCHEMA_VERSION,
+      lastMigrationAt: nowText(),
+      migrationCount: Number(beforeSettings.migrationCount || 0) + (silent ? 0 : 1)
+    });
+
+    return {
+      sessionsBefore: safeArray(beforeSessions).length,
+      sessionsAfter: normalizedSessions.length,
+      logsBefore: safeArray(beforeLogs).length,
+      logsAfter: normalizedLogs.length
+    };
+  }
+
+  function ensureCurrentSchema() {
+    const st = settings();
+    if (st.dataSchemaVersion !== DATA_SCHEMA_VERSION) {
+      migrateData({silent:true});
+    }
+  }
+
   function id(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
   function today() {
     const d = new Date();
@@ -272,6 +403,7 @@
           ${btn("半荘一覧", "showSessionList()")}
           ${btn("局ログ一覧", "showLogList()")}
           ${btn("CSV出力", "showCsv()")}
+          ${btn("システム", "showSystem()")}
         </div>
       </section>
       <section class="card">
@@ -630,6 +762,58 @@
     app.innerHTML = `<section class="card"><h2>CSV出力</h2><p class="muted">局ログCSVと半荘CSVを別々に出力します。</p><div class="grid two">${btn("局ログCSVを出力", "exportLogsCsv()", "primary")}${btn("半荘CSVを出力", "exportSessionsCsv()", "primary")}</div></section><section class="card"><h2>現在の件数</h2><p>局ログ：${logs().length}件</p><p>半荘：${sessions().length}件</p></section>`;
   };
 
+
+  window.showSystem = function() {
+    const st = settings();
+    const ss = sessions();
+    const ls = logs();
+    const backupKeys = [];
+    for (let i=0; i<localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(KEY_BACKUP_PREFIX)) backupKeys.push(k);
+    }
+    app.innerHTML = `
+      <section class="card">
+        <h2>システム</h2>
+        <div class="versionBox">
+          <p><strong>アプリバージョン：</strong><span class="mono">${esc(APP_VERSION)}</span></p>
+          <p><strong>データ形式：</strong><span class="mono">schema v${esc(DATA_SCHEMA_VERSION)}</span></p>
+          <p><strong>最終データ更新：</strong>${esc(st.lastMigrationAt || "未実行")}</p>
+          <p><strong>半荘データ：</strong>${ss.length}件　<strong>局ログ：</strong>${ls.length}件</p>
+          <p><strong>バックアップ：</strong>${backupKeys.length}件</p>
+        </div>
+      </section>
+      <section class="card">
+        <h2>データ形式アップデート</h2>
+        <p class="muted">最新版に合わせて、保存済みの半荘データ・局ログの不足項目を補正します。保存キーは変更せず、既存データを消去しません。</p>
+        <div class="warnBox">
+          <p><strong>実行前に自動バックアップを作成します。</strong></p>
+          <p class="muted">過去データの削除や localStorage.clear() は行いません。</p>
+        </div>
+        <div class="grid two">
+          ${btn("データ形式を最新版へ更新", "runDataMigration()", "primary")}
+          ${btn("CSV出力へ", "showCsv()")}
+        </div>
+      </section>
+      <section class="card">
+        <h2>現在の保存キー</h2>
+        <p class="mono">${esc(KEY_SESSIONS)}</p>
+        <p class="mono">${esc(KEY_LOGS)}</p>
+        <p class="mono">${esc(KEY_SETTINGS)}</p>
+        <p class="mono">${esc(KEY_DRAFT)}</p>
+      </section>
+    `;
+  };
+
+  window.runDataMigration = function() {
+    if (!confirm("保存済みデータを最新版の形式へ補正します。実行前に自動バックアップを作成します。よろしいですか？")) return;
+    const result = migrateData({silent:false});
+    alert(`データ形式アップデート完了\n半荘：${result.sessionsBefore}件 → ${result.sessionsAfter}件\n局ログ：${result.logsBefore}件 → ${result.logsAfter}件`);
+    showSystem();
+  };
+
+
+  ensureCurrentSchema();
   showHome();
 })();
 </script>
