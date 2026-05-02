@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=1.4.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=1.4.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=1.4.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=1.4.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=1.4.0" />
+  <link rel="manifest" href="./manifest.json?v=1.6.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=1.6.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=1.6.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=1.6.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=1.6.0" />
 
   <style>
     :root {
@@ -125,11 +125,81 @@
 
     .versionBox { padding: 12px; border-radius: 12px; background: #f9fafb; border: 1px solid var(--line); font-size: 14px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+    .tableView {
+      position: relative;
+      min-height: 250px;
+      margin: 14px 0 4px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at center, rgba(253,255,0,.38), rgba(255,255,255,.92) 55%, rgba(249,250,251,1) 100%);
+    }
+    .tableCore {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 96px;
+      height: 96px;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+      background: #111827;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-weight: 800;
+      letter-spacing: .04em;
+      box-shadow: 0 8px 20px rgba(0,0,0,.18);
+    }
+    .seatBox {
+      position: absolute;
+      min-width: 118px;
+      max-width: 150px;
+      padding: 9px 10px;
+      border-radius: 14px;
+      background: #fff;
+      border: 2px solid var(--line);
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      text-align: center;
+      font-size: 13px;
+    }
+    .seatTop { left: 50%; top: 12px; transform: translateX(-50%); }
+    .seatBottom { left: 50%; bottom: 12px; transform: translateX(-50%); }
+    .seatLeft { left: 12px; top: 50%; transform: translateY(-50%); }
+    .seatRight { right: 12px; top: 50%; transform: translateY(-50%); }
+    .seatName { font-size: 18px; font-weight: 800; margin-bottom: 3px; }
+    .seatRole { color: var(--muted); font-size: 12px; }
+    .seatTags { margin-top: 5px; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+    .seatTag {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+    }
+    .seatDealer { border-color: #111827; }
+    .seatMasuda { border-color: #FDFF00; box-shadow: 0 0 0 3px rgba(253,255,0,.65), 0 4px 12px rgba(0,0,0,.10); }
+    .seatNorth { opacity: .72; background: #f3f4f6; }
+    .tagDealer { background: #111827; color: #fff; border-color: #111827; }
+    .tagNorth { background: #e5e7eb; color: #374151; }
+    .tagMasuda { background: #FDFF00; color: #111827; border-color: #111827; }
+    @media (max-width: 430px) {
+      .tableView { min-height: 285px; padding: 10px; }
+      .seatBox { min-width: 104px; max-width: 128px; padding: 8px 7px; font-size: 12px; }
+      .seatName { font-size: 16px; }
+      .tableCore { width: 78px; height: 78px; font-size: 13px; }
+      .seatLeft { left: 6px; }
+      .seatRight { right: 6px; }
+    }
+
   </style>
 </head>
 <body>
   <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.5.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.6.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -142,7 +212,7 @@
 
 <script>
 (() => {
-  const APP_VERSION = "1.5.0";
+  const APP_VERSION = "1.6.0";
   const DATA_SCHEMA_VERSION = 3;
   const KEY_SETTINGS = "sanma_log_pwa_settings";
   const KEY_BACKUP_PREFIX = "sanma_log_pwa_backup_before_migration_";
@@ -388,6 +458,62 @@
     if (r.north === "益田") return "北家（抜け番）";
     return "";
   }
+  function roleLabel(roleKey) {
+    return ({ east: "東家", south: "南家", west: "西家", north: "北家" }[roleKey] || "");
+  }
+  function roleShort(roleKey) {
+    return ({ east: "東", south: "南", west: "西", north: "北" }[roleKey] || "");
+  }
+  function playerRoleMap(session) {
+    const r = currentRoles(session);
+    return [
+      { role: "east", name: r.east },
+      { role: "south", name: r.south },
+      { role: "west", name: r.west },
+      { role: "north", name: r.north }
+    ];
+  }
+  function renderSeatBox(posClass, item) {
+    const isDealer = item.role === "east";
+    const isNorth = item.role === "north";
+    const isMasuda = item.name === "益田";
+    const cls = ["seatBox", posClass, isDealer ? "seatDealer" : "", isNorth ? "seatNorth" : "", isMasuda ? "seatMasuda" : ""].join(" ");
+    const tags = [
+      isMasuda ? `<span class="seatTag tagMasuda">益田</span>` : "",
+      isDealer ? `<span class="seatTag tagDealer">親</span>` : "",
+      isNorth ? `<span class="seatTag tagNorth">抜け番</span>` : ""
+    ].filter(Boolean).join("");
+    return `<div class="${cls}">
+      <div class="seatName">${esc(item.name || "-")}</div>
+      <div class="seatRole">${esc(roleLabel(item.role))}</div>
+      <div class="seatTags">${tags}</div>
+    </div>`;
+  }
+  function renderTableView(session) {
+    const items = playerRoleMap(session);
+    const order = ["east", "south", "west", "north"];
+    const masudaItem = items.find(x => x.name === "益田") || items[0];
+    const idx = order.indexOf(masudaItem.role);
+    const byRole = Object.fromEntries(items.map(x => [x.role, x]));
+
+    // 益田を常に下に固定。右＝次家、上＝対面、左＝上家の位置で表示。
+    const bottom = byRole[order[idx]];
+    const right = byRole[order[(idx + 1) % 4]];
+    const top = byRole[order[(idx + 2) % 4]];
+    const left = byRole[order[(idx + 3) % 4]];
+
+    return `<section class="card">
+      <h2>卓図（益田視点）</h2>
+      <p class="muted">益田を常に下側に固定して表示します。実際の東南西北は各名前の下に表示します。</p>
+      <div class="tableView">
+        ${renderSeatBox("seatTop", top)}
+        ${renderSeatBox("seatLeft", left)}
+        <div class="tableCore">${esc(roundLabel(session)).replace(" ", "<br>")}</div>
+        ${renderSeatBox("seatRight", right)}
+        ${renderSeatBox("seatBottom", bottom)}
+      </div>
+    </section>`;
+  }
   function isMasudaDealer(session) { return currentRoles(session).east === "益田"; }
   function opponentOptions(session) { return participants(session).filter(p => p !== "益田"); }
   function baseLog(session, resultType) {
@@ -540,6 +666,7 @@
         <p>参加者：${ps.map(p => `<span class="pill yellow">${esc(p)}</span>`).join(" ")}</p>
         <p>益田：<strong>${esc(masudaRole(session))}</strong></p>
       </section>
+      ${renderTableView(session)}
       ${masudaJoined ? renderResultSelect(session) : renderMasudaAbsent(session)}
       <section class="card">
         <h2>半荘操作</h2>
@@ -622,6 +749,7 @@
       <section class="card">
         <h2>${esc(roundLabel(session))}：${esc(result)}</h2>
         <p class="muted">親：${esc(currentRoles(session).east)} / 北家：${esc(currentRoles(session).north)}</p>
+        ${renderTableView(session)}
         ${result === "ツモ和了" ? `<p>支払い者：${others.map(o => `<span class="pill">${esc(o)}</span>`).join(" ")}</p>` : ""}
         ${needsOpponent ? `<h3>${opponentLabel}</h3>${renderChoiceButtons(others, "selectOpponent", inputDraft.opponent)}` : ""}
         ${isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point")}`}
