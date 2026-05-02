@@ -1,11 +1,11 @@
 {
-  "appVersion": "2.3.0",
-  "dataSchemaVersion": 5,
+  "appVersion": "2.4.0",
+  "dataSchemaVersion": 6,
   "updatedAt": "2026-05-02",
   "notes": [
-    "エケベリア管理アプリの下部タブバー構造に寄せて調整",
-    "max-width 520px のアプリシェルを追加",
-    "下部タブを高さ78px・5分割・アイコン付きに変更",
-    "アイコン画像の変更なし"
+    "主観タグを複数選択化",
+    "主観タグ候補を結果別に再整理",
+    "旧subjectiveTagと新subjectiveTagsの互換対応",
+    "通常CSVでは複数タグを・区切りで出力"
   ]
 }

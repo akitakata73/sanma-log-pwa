@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.3.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.3.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.3.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.3.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.3.0" />
+  <link rel="manifest" href="./manifest.json?v=2.4.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.4.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.4.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.4.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.4.0" />
 
   <style>
     :root {
@@ -344,7 +344,7 @@
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.3.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.4.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -358,18 +358,18 @@
 
 <script>
 (() => {
-  const APP_VERSION = "2.3.0";
-  const DATA_SCHEMA_VERSION = 3;
+  const APP_VERSION = "2.4.0";
+  const DATA_SCHEMA_VERSION = 6;
   const KEY_SETTINGS = "sanma_log_pwa_settings";
   const KEY_BACKUP_PREFIX = "sanma_log_pwa_backup_before_migration_";
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
   const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
   const TAGS = {
-    win: ["4000拾い", "高打点成功", "親活用", "親流し成功", "ミスなし", "不明"],
-    dealIn: ["押しすぎ", "降り遅れ", "高打点放銃", "不明"],
-    tsumoLoss: ["高打点被ツモ", "ミスなし", "不明"],
-    draw: ["形式テンパイ成功", "オリ切り", "押しすぎ", "不明"]
+    win: ["押し成功", "リーチ判断成功", "鳴き判断成功", "カン判断成功", "枚数把握不安", "問題無し"],
+    dealIn: ["押しすぎ", "安手で押しすぎ", "テンパイ固執", "オリ判断ミス", "現物なし", "安全牌不足", "スジ引っかけ", "生牌切り", "ドラそば", "染め手見落とし", "待ち読みミス", "リーチ判断ミス", "鳴き判断ミス", "鳴き対応ミス", "カン判断ミス", "問題無し"],
+    tsumoLoss: ["速度負け", "ベタ降り中", "押し返し中", "テンパイ崩し", "問題無し"],
+    draw: ["形式テンパイ", "オリ完了", "テンパイ崩し", "回し打ち成功", "問題無し"]
   };
   const KEY_SESSIONS = "sanma_log_pwa_sessions";
   const KEY_LOGS = "sanma_log_pwa_round_logs";
@@ -466,6 +466,7 @@
       opponentDealer: Boolean(l?.opponentDealer),
       stance: l?.stance || "",
       subjectiveTag: l?.subjectiveTag || "",
+      subjectiveTags: safeArray((l?.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags : (l?.subjectiveTag ? [l.subjectiveTag] : [])),
       tenpaiPlayers: safeArray(l?.tenpaiPlayers),
       createdAt: l?.createdAt || nowText(),
       appVersion: APP_VERSION,
@@ -605,7 +606,7 @@
       l.opponent ? esc(l.opponent) : "",
       Number(l.scoreDeltaPoint || 0) !== 0 ? formatDelta(l.scoreDeltaPoint) : "0点",
       l.stance ? `姿勢：${esc(l.stance)}` : "",
-      l.subjectiveTag ? `タグ：${esc(l.subjectiveTag)}` : "",
+      (l.subjectiveTags && l.subjectiveTags.length) ? `タグ：${esc(l.subjectiveTags.join("・"))}` : (l.subjectiveTag ? `タグ：${esc(l.subjectiveTag)}` : ""),
       l.tenpaiPlayers && l.tenpaiPlayers.length ? `テンパイ：${esc(l.tenpaiPlayers.join("・"))}` : ""
     ].filter(Boolean).join(" / ");
     return `<div class="previousLog">
@@ -732,6 +733,7 @@
       opponentDealer: false,
       stance: "",
       subjectiveTag: "",
+      subjectiveTags: [],
       tenpaiPlayers: [],
       createdAt: nowText()
     };
@@ -794,6 +796,11 @@
   }
   function renderChoiceButtons(list, fnName, current="") {
     return `<div class="grid three">${list.map(x => btn(x, `${fnName}('${x}')`, current === x ? "selected" : "")).join("")}</div>`;
+  }
+  function renderSubjectiveTagButtons(list) {
+    const selected = inputDraft.tags || [];
+    if (!list.length) return `<p class="muted">この結果では主観タグ入力はありません。</p>`;
+    return `<p class="muted">複数選択できます。もう一度押すと解除します。</p><div class="grid three">${list.map(x => btn(x, `toggleSubjectiveTag('${x}')`, selected.includes(x) ? "selected" : "")).join("")}</div>`;
   }
 
   window.showHome = function() {
@@ -952,7 +959,7 @@
   }
 
   window.startInput = function(sessionId, resultType) {
-    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, stance: "", tag: "", tenpaiPlayers: [] };
+    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, stance: "", tags: [], tenpaiPlayers: [] };
     renderInputForm();
   };
   window.selectOpponent = function(name) {
@@ -989,7 +996,12 @@
     renderInputForm();
   };
   window.selectStance = function(stance) { inputDraft.stance = stance; renderInputForm(); };
-  window.selectTag = function(tag) { inputDraft.tag = tag; renderInputForm(); };
+  window.toggleSubjectiveTag = function(tag) {
+    const arr = inputDraft.tags || [];
+    if (arr.includes(tag)) inputDraft.tags = arr.filter(x => x !== tag);
+    else inputDraft.tags = [...arr, tag];
+    renderInputForm();
+  };
   window.toggleTenpai = function(name) {
     const arr = inputDraft.tenpaiPlayers || [];
     if (arr.includes(name)) inputDraft.tenpaiPlayers = arr.filter(x => x !== name);
@@ -1022,7 +1034,7 @@
     }
     const opponentLabel = result === "ロン和了" ? "誰から？" : result === "ロン放銃" ? "誰へ？" : result === "ツモられ" ? "誰にツモられ？" : "";
     const pointLabel = result === "ツモ和了" ? "益田の総収入" : result === "ツモられ" ? "益田の支払い" : result === "ロン放銃" ? "失点" : "打点";
-    const ready = isDraw ? (inputDraft.stance && inputDraft.tag) : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)) && inputDraft.stance && inputDraft.tag);
+    const ready = isDraw ? !!inputDraft.stance : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)) && inputDraft.stance);
     app.innerHTML = `
       <section class="card">
         ${renderCurrentStatus(session)}
@@ -1034,7 +1046,7 @@
         ${isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point", session)}`}
         ${scorePreview}
         <h3>対局姿勢</h3>${renderChoiceButtons(STANCES, "selectStance", inputDraft.stance)}
-        <h3>主観タグ</h3>${renderChoiceButtons(tagListFor(result), "selectTag", inputDraft.tag)}
+        <h3>主観タグ（複数選択可）</h3>${renderSubjectiveTagButtons(tagListFor(result))}
         <div class="row" style="margin-top:14px;">
           ${btn("保存", `saveInput()`, ready ? "primary" : "")}
           ${btn("戻る", `showRound('${session.id}')`)}
@@ -1066,7 +1078,8 @@
     const log = baseLog(session, inputDraft.resultType);
     log.opponent = inputDraft.opponent || "";
     log.stance = inputDraft.stance || "";
-    log.subjectiveTag = inputDraft.tag || "";
+    log.subjectiveTags = inputDraft.tags || [];
+    log.subjectiveTag = log.subjectiveTags.join("・");
     log.tenpaiPlayers = inputDraft.tenpaiPlayers || [];
     if (inputDraft.resultType === "流局") {
       log.scoreDeltaPoint = calcDrawDelta(log.tenpaiPlayers, participants(session));
@@ -1098,6 +1111,7 @@
     log.scoreDeltaK = 0;
     log.stance = "";
     log.subjectiveTag = "";
+    log.subjectiveTags = [];
     addLog(log);
     renderNextStep(sessionId, "被害なしとして記録しました。");
   };
@@ -1242,7 +1256,7 @@
 
   window.showLogList = function() {
     const ls = logs().filter(l => l.isCanceled !== true).slice().reverse();
-    app.innerHTML = `<section class="card"><h2>局ログ一覧</h2><p class="muted">取消済みログはこの一覧には表示しません。</p>${ls.length ? `<table><thead><tr><th>局</th><th>結果</th><th>点数</th><th>姿勢/タグ</th><th></th></tr></thead><tbody>${ls.map(l => `<tr><td>${esc(l.date)}<br>${esc(l.roundLabel)}<br>親:${esc(l.dealer)} 北:${esc(l.northPlayer)}</td><td>${esc(l.resultType)}<br>${esc(l.opponent || l.skipReason || "")}</td><td>${l.scoreDeltaPoint > 0 ? "+" : ""}${l.scoreDeltaPoint}</td><td>${esc(l.stance || "")}<br>${esc(l.subjectiveTag || "")}</td><td>${btn("削除", `deleteLog('${l.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ局ログがありません。</p>`}</section>`;
+    app.innerHTML = `<section class="card"><h2>局ログ一覧</h2><p class="muted">取消済みログはこの一覧には表示しません。</p>${ls.length ? `<table><thead><tr><th>局</th><th>結果</th><th>点数</th><th>姿勢/タグ</th><th></th></tr></thead><tbody>${ls.map(l => `<tr><td>${esc(l.date)}<br>${esc(l.roundLabel)}<br>親:${esc(l.dealer)} 北:${esc(l.northPlayer)}</td><td>${esc(l.resultType)}<br>${esc(l.opponent || l.skipReason || "")}</td><td>${l.scoreDeltaPoint > 0 ? "+" : ""}${l.scoreDeltaPoint}</td><td>${esc(l.stance || "")}<br>${esc((l.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags.join("・") : (l.subjectiveTag || ""))}</td><td>${btn("削除", `deleteLog('${l.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ局ログがありません。</p>`}</section>`;
   };
   window.deleteLog = function(logId) { setLogs(logs().filter(l => l.id !== logId)); showLogList(); };
 
@@ -1260,7 +1274,7 @@
   }
   window.exportLogsCsv = function() {
     const header = ["半荘ID","局ID","日付","局表示","場","局番号","連荘数","親","北家","参加者","益田参加","スキップ理由","結果","相手","点数移動_点","点数移動_千点","益田親","相手親","対局姿勢","主観タグ","テンパイ者","作成日時"];
-    const rows = logs().filter(l => l.isCanceled !== true).map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,l.dealer,l.northPlayer,l.participants,l.masudaJoined,l.skipReason,l.resultType,l.opponent,l.scoreDeltaPoint,l.scoreDeltaK,l.masudaDealer,l.opponentDealer,l.stance,l.subjectiveTag,l.tenpaiPlayers,l.createdAt]);
+    const rows = logs().filter(l => l.isCanceled !== true).map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,l.dealer,l.northPlayer,l.participants,l.masudaJoined,l.skipReason,l.resultType,l.opponent,l.scoreDeltaPoint,l.scoreDeltaK,l.masudaDealer,l.opponentDealer,l.stance,((l.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags.join("・") : (l.subjectiveTag || "")),l.tenpaiPlayers,l.createdAt]);
     downloadCsv(`sanma_round_logs_${today()}.csv`, [header, ...rows]);
   };
   window.exportSessionsCsv = function() {
