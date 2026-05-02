@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>三麻ログPWA v1</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --primary: #111827;
+      --primaryText: #ffffff;
+      --accent: #f4d500;
+      --danger: #b91c1c;
+      --ok: #047857;
+      --soft: #f3f4f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: .02em;
+    }
+    header .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    main { padding: 14px; max-width: 900px; margin: 0 auto 64px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.03);
+    }
+    h2 { font-size: 18px; margin: 0 0 10px; }
+    h3 { font-size: 15px; margin: 14px 0 8px; }
+    .grid { display: grid; gap: 10px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (max-width: 520px) {
+      .grid.two, .grid.three, .grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    button {
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 10px;
+      font-size: 15px;
+      font-weight: 650;
+      min-height: 48px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    button.primary { background: var(--primary); color: var(--primaryText); border-color: var(--primary); }
+    button.accent { background: var(--accent); color: #111827; border-color: #d4b900; }
+    button.danger { background: #fee2e2; color: var(--danger); border-color: #fecaca; }
+    button.ok { background: #d1fae5; color: var(--ok); border-color: #a7f3d0; }
+    button.soft { background: var(--soft); }
+    button.selected { background: var(--primary); color: var(--primaryText); border-color: var(--primary); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .pill {
+      display: inline-block;
+      padding: 5px 9px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 13px;
+      margin: 2px;
+    }
+    .pill.black { background: #111827; color: white; border-color: #111827; }
+    .pill.yellow { background: #fff8a6; border-color: #e8d400; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .big-number { font-size: 30px; font-weight: 800; margin: 8px 0; }
+    .score-pos { color: var(--ok); }
+    .score-neg { color: var(--danger); }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 16px;
+      background: white;
+    }
+    textarea { min-height: 80px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 700; background: #fafafa; }
+    .notice { padding: 10px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a; }
+    .dangerBox { padding: 10px; border-radius: 12px; background: #fef2f2; border: 1px solid #fecaca; }
+    .footerNav {
+      position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,.96);
+      border-top: 1px solid var(--line); padding: 8px; display: flex; gap: 8px; justify-content: center;
+    }
+    .footerNav button { min-height: 42px; padding: 8px 12px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>三麻ログPWA v1</h1>
+    <div class="sub">四人一抜け三麻・益田視点ログ</div>
+  </header>
+  <main id="app"></main>
+  <nav class="footerNav">
+    <button onclick="showHome()">ホーム</button>
+    <button onclick="showCurrentOrNew()">進行中</button>
+    <button onclick="showCsv()">CSV</button>
+  </nav>
+
+<script>
+(() => {
+  const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
+  const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,48000,96000];
+  const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
+  const TAGS = {
+    win: ["4000拾い", "高打点成功", "親活用", "親流し成功", "ミスなし", "不明"],
+    dealIn: ["押しすぎ", "降り遅れ", "高打点放銃", "不明"],
+    tsumoLoss: ["高打点被ツモ", "ミスなし", "不明"],
+    draw: ["形式テンパイ成功", "オリ切り", "押しすぎ", "不明"]
+  };
+  const KEY_SESSIONS = "sanma_log_pwa_sessions";
+  const KEY_LOGS = "sanma_log_pwa_round_logs";
+  const KEY_DRAFT = "sanma_log_pwa_draft";
+
+  const app = document.getElementById("app");
+  let seatDraft = { east: "", south: "", west: "", north: "" };
+  let inputDraft = {};
+
+  function load(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+    catch { return fallback; }
+  }
+  function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+  function sessions() { return load(KEY_SESSIONS, []); }
+  function logs() { return load(KEY_LOGS, []); }
+  function setSessions(v) { save(KEY_SESSIONS, v); }
+  function setLogs(v) { save(KEY_LOGS, v); }
+  function id(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function today() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const day = String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+  function nowText() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+  }
+  function activeSession() { return sessions().find(s => s.status === "in_progress") || null; }
+  function updateSession(session) {
+    const all = sessions();
+    const idx = all.findIndex(s => s.id === session.id);
+    session.updatedAt = nowText();
+    if (idx >= 0) all[idx] = session; else all.push(session);
+    setSessions(all);
+  }
+  function addLog(log) {
+    const all = logs();
+    all.push(log);
+    setLogs(all);
+  }
+  function currentRoles(session) {
+    const seats = session.seats;
+    const di = session.current.dealerIndex;
+    return {
+      east: seats[di % 4],
+      south: seats[(di + 1) % 4],
+      west: seats[(di + 2) % 4],
+      north: seats[(di + 3) % 4]
+    };
+  }
+  function participants(session) {
+    const r = currentRoles(session);
+    return [r.east, r.south, r.west].filter(Boolean);
+  }
+  function roundLabel(session) {
+    const f = session.current.field === "東場" ? "東" : "南";
+    const base = `${f}${session.current.roundNumber}局`;
+    return session.current.repeatCount > 0 ? `${base} ${session.current.repeatCount}連荘` : base;
+  }
+  function masudaRole(session) {
+    const r = currentRoles(session);
+    if (r.east === "益田") return "東家（親）";
+    if (r.south === "益田") return "南家";
+    if (r.west === "益田") return "西家";
+    if (r.north === "益田") return "北家（抜け番）";
+    return "";
+  }
+  function isMasudaDealer(session) { return currentRoles(session).east === "益田"; }
+  function opponentOptions(session) { return participants(session).filter(p => p !== "益田"); }
+  function baseLog(session, resultType) {
+    const r = currentRoles(session);
+    return {
+      id: id("L"),
+      sessionId: session.id,
+      date: session.date,
+      roundLabel: roundLabel(session),
+      field: session.current.field,
+      roundNumber: session.current.roundNumber,
+      repeatCount: session.current.repeatCount,
+      dealer: r.east,
+      northPlayer: r.north,
+      participants: participants(session),
+      masudaJoined: r.north !== "益田",
+      skipReason: "",
+      resultType,
+      opponent: "",
+      scoreDeltaPoint: 0,
+      scoreDeltaK: 0,
+      masudaDealer: r.east === "益田",
+      opponentDealer: false,
+      stance: "",
+      subjectiveTag: "",
+      tenpaiPlayers: [],
+      createdAt: nowText()
+    };
+  }
+
+  function btn(label, onclick, cls="") {
+    return `<button class="${cls}" onclick="${onclick}">${esc(label)}</button>`;
+  }
+  function renderPointButtons(varName="point") {
+    return `<div class="grid three">${POINTS.map(p => btn(`${p}点`, `selectPoint(${p})`, inputDraft[varName] === p ? "selected" : "")).join("")}</div>`;
+  }
+  function renderChoiceButtons(list, fnName, current="") {
+    return `<div class="grid three">${list.map(x => btn(x, `${fnName}('${x}')`, current === x ? "selected" : "")).join("")}</div>`;
+  }
+
+  window.showHome = function() {
+    const active = activeSession();
+    const ss = sessions();
+    const ls = logs();
+    app.innerHTML = `
+      <section class="card">
+        <h2>ホーム</h2>
+        <p class="muted">局ごとに、益田視点の結果・点数移動・対局姿勢を記録します。</p>
+        <div class="grid two">
+          ${btn("新しい半荘", "showNewSession()", "primary")}
+          ${btn(active ? "進行中の半荘" : "進行中なし", "showCurrentOrNew()", active ? "accent" : "soft")}
+          ${btn("半荘一覧", "showSessionList()")}
+          ${btn("局ログ一覧", "showLogList()")}
+          ${btn("CSV出力", "showCsv()")}
+        </div>
+      </section>
+      <section class="card">
+        <h2>現在の状況</h2>
+        ${active ? `<p><span class="pill black">進行中</span> ${esc(active.date)} / ${esc(roundLabel(active))}</p><p>親：${esc(currentRoles(active).east)}　北家：${esc(currentRoles(active).north)}</p>` : `<p class="muted">進行中の半荘はありません。</p>`}
+        <p class="muted">半荘数：${ss.length} / 局ログ数：${ls.length}</p>
+      </section>
+    `;
+  };
+
+  window.showCurrentOrNew = function() {
+    const active = activeSession();
+    if (active) showRound(active.id); else showNewSession();
+  };
+
+  window.showNewSession = function() {
+    if (activeSession()) {
+      app.innerHTML = `<section class="card"><h2>進行中の半荘があります</h2><p>新しい半荘を開始する前に、進行中の半荘を終了してください。</p>${btn("進行中へ", "showCurrentOrNew()", "primary")}</section>`;
+      return;
+    }
+    seatDraft = { east: "", south: "", west: "", north: "" };
+    renderSeatSetup();
+  };
+
+  window.setSeat = function(pos, name) {
+    seatDraft[pos] = name;
+    if (pos === "east") { seatDraft.south = ""; seatDraft.west = ""; seatDraft.north = ""; }
+    if (pos === "south") { seatDraft.west = ""; seatDraft.north = ""; }
+    if (pos === "west") { seatDraft.north = ""; }
+    const chosen = [seatDraft.east, seatDraft.south, seatDraft.west].filter(Boolean);
+    if (seatDraft.east && seatDraft.south && seatDraft.west) {
+      seatDraft.north = MEMBERS.find(m => !chosen.includes(m)) || "";
+    }
+    renderSeatSetup();
+  };
+
+  function renderSeatButtons(pos, used) {
+    return `<div class="grid four">${MEMBERS.filter(m => !used.includes(m) || seatDraft[pos] === m).map(m => btn(m, `setSeat('${pos}','${m}')`, seatDraft[pos] === m ? "selected" : "")).join("")}</div>`;
+  }
+  function renderSeatSetup() {
+    const usedEast = [];
+    const usedSouth = [seatDraft.east].filter(Boolean);
+    const usedWest = [seatDraft.east, seatDraft.south].filter(Boolean);
+    const ready = seatDraft.east && seatDraft.south && seatDraft.west && seatDraft.north;
+    app.innerHTML = `
+      <section class="card">
+        <h2>半荘開始・席順設定</h2>
+        <h3>東家を選択</h3>${renderSeatButtons("east", usedEast)}
+        <h3>南家を選択</h3>${seatDraft.east ? renderSeatButtons("south", usedSouth) : `<p class="muted">先に東家を選択してください。</p>`}
+        <h3>西家を選択</h3>${seatDraft.south ? renderSeatButtons("west", usedWest) : `<p class="muted">先に南家を選択してください。</p>`}
+        <h3>北家</h3><p>${seatDraft.north ? `<span class="pill yellow">${esc(seatDraft.north)}</span>` : `<span class="muted">東・南・西を選ぶと自動表示されます。</span>`}</p>
+        <div class="row">${btn("半荘開始", "startSession()", ready ? "primary" : "",)} ${btn("ホーム", "showHome()")}</div>
+      </section>`;
+    if (!ready) {
+      const buttons = app.querySelectorAll("button");
+      const start = Array.from(buttons).find(b => b.textContent === "半荘開始");
+      if (start) start.disabled = true;
+    }
+  }
+
+  window.startSession = function() {
+    if (!(seatDraft.east && seatDraft.south && seatDraft.west && seatDraft.north)) return;
+    const session = {
+      id: id("H"),
+      date: today(),
+      seats: [seatDraft.east, seatDraft.south, seatDraft.west, seatDraft.north],
+      initialSeats: { east: seatDraft.east, south: seatDraft.south, west: seatDraft.west, north: seatDraft.north },
+      current: { field: "東場", roundNumber: 1, repeatCount: 0, dealerIndex: 0 },
+      masudaScorePoint: null,
+      masudaScoreK: null,
+      memo: "",
+      status: "in_progress",
+      createdAt: nowText(),
+      updatedAt: nowText()
+    };
+    const all = sessions(); all.push(session); setSessions(all);
+    showRound(session.id);
+  };
+
+  window.showRound = function(sessionId) {
+    const session = sessions().find(s => s.id === sessionId);
+    if (!session) { showHome(); return; }
+    const r = currentRoles(session);
+    const ps = participants(session);
+    const masudaJoined = r.north !== "益田";
+    app.innerHTML = `
+      <section class="card">
+        <h2>${esc(roundLabel(session))}</h2>
+        <p><span class="pill black">親：${esc(r.east)}</span> <span class="pill">北家：${esc(r.north)}（抜け番）</span></p>
+        <p>参加者：${ps.map(p => `<span class="pill yellow">${esc(p)}</span>`).join(" ")}</p>
+        <p>益田：<strong>${esc(masudaRole(session))}</strong></p>
+      </section>
+      ${masudaJoined ? renderResultSelect(session) : renderMasudaAbsent(session)}
+      <section class="card">
+        <h2>半荘操作</h2>
+        <div class="grid two">
+          ${btn("半荘収支入力", `showScoreInput('${session.id}')`)}
+          ${btn("半荘を終了", `finishSession('${session.id}')`, "danger")}
+        </div>
+      </section>
+    `;
+  };
+
+  function renderMasudaAbsent(session) {
+    return `<section class="card">
+      <h2>益田抜け番</h2>
+      <p class="muted">この局は益田が北家です。通常はスキップで進めます。</p>
+      <div class="grid two">
+        ${btn("益田抜け番でスキップ", `saveSkip('${session.id}','益田抜け番')`, "primary")}
+        ${btn("状況だけ記録（入力困難）", `saveSkip('${session.id}','入力困難')`)}
+      </div>
+    </section>`;
+  }
+
+  function renderResultSelect(session) {
+    return `<section class="card">
+      <h2>結果を選択</h2>
+      <div class="grid two">
+        ${btn("ロン和了", `startInput('${session.id}','ロン和了')`, "ok")}
+        ${btn("ツモ和了", `startInput('${session.id}','ツモ和了')`, "ok")}
+        ${btn("ロン放銃", `startInput('${session.id}','ロン放銃')`, "danger")}
+        ${btn("ツモられ", `startInput('${session.id}','ツモられ')`, "danger")}
+        ${btn("流局", `startInput('${session.id}','流局')`)}
+        ${btn("入力できずスキップ", `saveSkip('${session.id}','入力困難')`, "soft")}
+      </div>
+    </section>`;
+  }
+
+  window.startInput = function(sessionId, resultType) {
+    inputDraft = { sessionId, resultType, opponent: "", point: null, stance: "", tag: "", tenpaiPlayers: [] };
+    renderInputForm();
+  };
+  window.selectOpponent = function(name) { inputDraft.opponent = name; renderInputForm(); };
+  window.selectPoint = function(point) { inputDraft.point = point; renderInputForm(); };
+  window.selectStance = function(stance) { inputDraft.stance = stance; renderInputForm(); };
+  window.selectTag = function(tag) { inputDraft.tag = tag; renderInputForm(); };
+  window.toggleTenpai = function(name) {
+    const arr = inputDraft.tenpaiPlayers || [];
+    if (arr.includes(name)) inputDraft.tenpaiPlayers = arr.filter(x => x !== name);
+    else inputDraft.tenpaiPlayers = [...arr, name];
+    renderInputForm();
+  };
+
+  function tagListFor(resultType) {
+    if (resultType === "ロン和了" || resultType === "ツモ和了") return TAGS.win;
+    if (resultType === "ロン放銃") return TAGS.dealIn;
+    if (resultType === "ツモられ") return TAGS.tsumoLoss;
+    if (resultType === "流局") return TAGS.draw;
+    return ["不明"];
+  }
+
+  function renderInputForm() {
+    const session = sessions().find(s => s.id === inputDraft.sessionId);
+    if (!session) return showHome();
+    const result = inputDraft.resultType;
+    const others = opponentOptions(session);
+    const ps = participants(session);
+    const needsOpponent = ["ロン和了", "ロン放銃", "ツモられ"].includes(result);
+    const isDraw = result === "流局";
+    let scorePreview = "";
+    if (isDraw) scorePreview = `<div class="notice">益田の点数移動：<strong>${calcDrawDelta(inputDraft.tenpaiPlayers, ps)}点</strong></div>`;
+    else if (inputDraft.point) {
+      const sign = (result === "ロン放銃" || result === "ツモられ") ? -1 : 1;
+      const val = sign * inputDraft.point;
+      scorePreview = `<div class="notice">点数移動：<strong>${val > 0 ? "+" : ""}${val}点</strong></div>`;
+    }
+    const opponentLabel = result === "ロン和了" ? "誰から？" : result === "ロン放銃" ? "誰へ？" : result === "ツモられ" ? "誰にツモられ？" : "";
+    const pointLabel = result === "ツモ和了" ? "益田の総収入" : result === "ツモられ" ? "益田の支払い" : result === "ロン放銃" ? "失点" : "打点";
+    const ready = isDraw ? (inputDraft.stance && inputDraft.tag) : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && inputDraft.stance && inputDraft.tag);
+    app.innerHTML = `
+      <section class="card">
+        <h2>${esc(roundLabel(session))}：${esc(result)}</h2>
+        <p class="muted">親：${esc(currentRoles(session).east)} / 北家：${esc(currentRoles(session).north)}</p>
+        ${result === "ツモ和了" ? `<p>支払い者：${others.map(o => `<span class="pill">${esc(o)}</span>`).join(" ")}</p>` : ""}
+        ${needsOpponent ? `<h3>${opponentLabel}</h3>${renderChoiceButtons(others, "selectOpponent", inputDraft.opponent)}` : ""}
+        ${isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point")}`}
+        ${scorePreview}
+        <h3>対局姿勢</h3>${renderChoiceButtons(STANCES, "selectStance", inputDraft.stance)}
+        <h3>主観タグ</h3>${renderChoiceButtons(tagListFor(result), "selectTag", inputDraft.tag)}
+        <div class="row" style="margin-top:14px;">
+          ${btn("保存", `saveInput()`, ready ? "primary" : "")}
+          ${btn("戻る", `showRound('${session.id}')`)}
+        </div>
+      </section>`;
+    if (!ready) {
+      const buttons = app.querySelectorAll("button");
+      const saveBtn = Array.from(buttons).find(b => b.textContent === "保存");
+      if (saveBtn) saveBtn.disabled = true;
+    }
+  }
+
+  function renderDrawSection(ps) {
+    return `<h3>テンパイ者を選択</h3><p class="muted">参加者3人から選択。全員テンパイ・全員ノーテンは点数移動0。</p><div class="grid three">${ps.map(p => btn(p, `toggleTenpai('${p}')`, (inputDraft.tenpaiPlayers || []).includes(p) ? "selected" : "")).join("")}</div>`;
+  }
+  function calcDrawDelta(tenpaiPlayers, ps) {
+    const t = tenpaiPlayers || [];
+    const n = t.length;
+    if (n === 0 || n === ps.length) return 0;
+    const masudaT = t.includes("益田");
+    if (n === 1) return masudaT ? 2000 : -1000;
+    if (n === 2) return masudaT ? 1000 : -2000;
+    return 0;
+  }
+
+  window.saveInput = function() {
+    const session = sessions().find(s => s.id === inputDraft.sessionId);
+    if (!session) return showHome();
+    const log = baseLog(session, inputDraft.resultType);
+    log.opponent = inputDraft.opponent || "";
+    log.stance = inputDraft.stance || "";
+    log.subjectiveTag = inputDraft.tag || "";
+    log.tenpaiPlayers = inputDraft.tenpaiPlayers || [];
+    if (inputDraft.resultType === "流局") {
+      log.scoreDeltaPoint = calcDrawDelta(log.tenpaiPlayers, participants(session));
+    } else {
+      const sign = (inputDraft.resultType === "ロン放銃" || inputDraft.resultType === "ツモられ") ? -1 : 1;
+      log.scoreDeltaPoint = sign * inputDraft.point;
+    }
+    log.scoreDeltaK = log.scoreDeltaPoint / 1000;
+    log.masudaDealer = isMasudaDealer(session);
+    log.opponentDealer = log.opponent ? currentRoles(session).east === log.opponent : false;
+    addLog(log);
+    renderNextStep(session.id, "保存しました。次局処理を選択してください。");
+  };
+
+  window.saveSkip = function(sessionId, reason) {
+    const session = sessions().find(s => s.id === sessionId);
+    if (!session) return showHome();
+    const log = baseLog(session, "スキップ");
+    log.skipReason = reason;
+    addLog(log);
+    renderNextStep(sessionId, `${reason}として記録しました。`);
+  };
+
+  function renderNextStep(sessionId, message) {
+    const session = sessions().find(s => s.id === sessionId);
+    app.innerHTML = `<section class="card"><h2>${esc(message)}</h2><p>${esc(roundLabel(session))}</p><div class="grid two">${btn("親継続", `continueDealer('${sessionId}')`, "accent")}${btn("親流れ", `rotateDealer('${sessionId}')`, "primary")}</div></section>`;
+  }
+
+  window.continueDealer = function(sessionId) {
+    const session = sessions().find(s => s.id === sessionId);
+    if (!session) return showHome();
+    session.current.repeatCount += 1;
+    updateSession(session);
+    showRound(sessionId);
+  };
+
+  window.rotateDealer = function(sessionId) {
+    const session = sessions().find(s => s.id === sessionId);
+    if (!session) return showHome();
+    if (session.current.field === "南場" && session.current.roundNumber === 4) {
+      session.status = "completed";
+      updateSession(session);
+      showScoreInput(sessionId, true);
+      return;
+    }
+    session.current.dealerIndex = (session.current.dealerIndex + 1) % 4;
+    session.current.repeatCount = 0;
+    if (session.current.field === "東場" && session.current.roundNumber === 4) {
+      session.current.field = "南場";
+      session.current.roundNumber = 1;
+    } else {
+      session.current.roundNumber += 1;
+    }
+    updateSession(session);
+    showRound(sessionId);
+  };
+
+  window.finishSession = function(sessionId) {
+    if (!confirm("この半荘を終了しますか？")) return;
+    const session = sessions().find(s => s.id === sessionId);
+    if (!session) return;
+    session.status = "completed";
+    updateSession(session);
+    showScoreInput(sessionId, true);
+  };
+
+  window.showScoreInput = function(sessionId, justFinished=false) {
+    const session = sessions().find(s => s.id === sessionId);
+    if (!session) return showHome();
+    let tempK = session.masudaScoreK ?? 0;
+    window.adjustScore = function(delta) { tempK += delta; renderScoreInput(); };
+    window.clearScore = function() { tempK = 0; renderScoreInput(); };
+    window.saveScore = function() {
+      const all = sessions();
+      const idx = all.findIndex(s => s.id === sessionId);
+      if (idx >= 0) {
+        all[idx].masudaScoreK = tempK;
+        all[idx].masudaScorePoint = tempK * 1000;
+        all[idx].memo = document.getElementById("scoreMemo")?.value || "";
+        all[idx].updatedAt = nowText();
+        setSessions(all);
+      }
+      showSessionList();
+    };
+    function renderScoreInput() {
+      app.innerHTML = `
+        <section class="card">
+          <h2>${justFinished ? "半荘終了" : "半荘収支入力"}</h2>
+          <p>${esc(session.date)} / 開始 東:${esc(session.initialSeats.east)} 南:${esc(session.initialSeats.south)} 西:${esc(session.initialSeats.west)} 北:${esc(session.initialSeats.north)}</p>
+          <p class="muted">収支は1000点単位で入力します。</p>
+          <div class="big-number ${tempK >= 0 ? "score-pos" : "score-neg"}">${tempK >= 0 ? "+" : ""}${tempK} <span class="muted">= ${tempK*1000}点</span></div>
+          <div class="grid four">
+            ${btn("+1", "adjustScore(1)")}${btn("+5", "adjustScore(5)")}${btn("+10", "adjustScore(10)")}${btn("+20", "adjustScore(20)")}
+            ${btn("-1", "adjustScore(-1)")}${btn("-5", "adjustScore(-5)")}${btn("-10", "adjustScore(-10)")}${btn("-20", "adjustScore(-20)")}
+          </div>
+          <p>${btn("クリア", "clearScore()", "soft")}</p>
+          <h3>半荘メモ</h3><textarea id="scoreMemo">${esc(session.memo || "")}</textarea>
+          <div class="row" style="margin-top:14px;">${btn("保存", "saveScore()", "primary")}${btn("後で入力", "showSessionList()")}</div>
+        </section>`;
+    }
+    renderScoreInput();
+  };
+
+  window.showSessionList = function() {
+    const ss = sessions().slice().reverse();
+    app.innerHTML = `<section class="card"><h2>半荘一覧</h2>${ss.length ? `<table><thead><tr><th>日付</th><th>席順</th><th>収支</th><th>状態</th><th></th></tr></thead><tbody>${ss.map(s => `<tr><td>${esc(s.date)}</td><td>東:${esc(s.initialSeats.east)}<br>南:${esc(s.initialSeats.south)}<br>西:${esc(s.initialSeats.west)}<br>北:${esc(s.initialSeats.north)}</td><td>${s.masudaScoreK == null ? "未入力" : `${s.masudaScoreK >= 0 ? "+" : ""}${s.masudaScoreK}`}</td><td>${esc(s.status)}</td><td>${s.status === "in_progress" ? btn("開く", `showRound('${s.id}')`) : btn("収支", `showScoreInput('${s.id}')`)} ${btn("削除", `deleteSession('${s.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ半荘がありません。</p>`}</section>`;
+  };
+
+  window.deleteSession = function(sessionId) {
+    if (!confirm("この半荘と紐づく局ログを削除しますか？")) return;
+    setSessions(sessions().filter(s => s.id !== sessionId));
+    setLogs(logs().filter(l => l.sessionId !== sessionId));
+    showSessionList();
+  };
+
+  window.showLogList = function() {
+    const ls = logs().slice().reverse();
+    app.innerHTML = `<section class="card"><h2>局ログ一覧</h2>${ls.length ? `<table><thead><tr><th>局</th><th>結果</th><th>点数</th><th>姿勢/タグ</th><th></th></tr></thead><tbody>${ls.map(l => `<tr><td>${esc(l.date)}<br>${esc(l.roundLabel)}<br>親:${esc(l.dealer)} 北:${esc(l.northPlayer)}</td><td>${esc(l.resultType)}<br>${esc(l.opponent || l.skipReason || "")}</td><td>${l.scoreDeltaPoint > 0 ? "+" : ""}${l.scoreDeltaPoint}</td><td>${esc(l.stance || "")}<br>${esc(l.subjectiveTag || "")}</td><td>${btn("削除", `deleteLog('${l.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ局ログがありません。</p>`}</section>`;
+  };
+  window.deleteLog = function(logId) { setLogs(logs().filter(l => l.id !== logId)); showLogList(); };
+
+  function csvEscape(v) {
+    const s = Array.isArray(v) ? v.join("・") : String(v ?? "");
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+  function downloadCsv(filename, rows) {
+    const csv = "\uFEFF" + rows.map(row => row.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+  window.exportLogsCsv = function() {
+    const header = ["半荘ID","局ID","日付","局表示","場","局番号","連荘数","親","北家","参加者","益田参加","スキップ理由","結果","相手","点数移動_点","点数移動_千点","益田親","相手親","対局姿勢","主観タグ","テンパイ者","作成日時"];
+    const rows = logs().map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,l.dealer,l.northPlayer,l.participants,l.masudaJoined,l.skipReason,l.resultType,l.opponent,l.scoreDeltaPoint,l.scoreDeltaK,l.masudaDealer,l.opponentDealer,l.stance,l.subjectiveTag,l.tenpaiPlayers,l.createdAt]);
+    downloadCsv(`sanma_round_logs_${today()}.csv`, [header, ...rows]);
+  };
+  window.exportSessionsCsv = function() {
+    const header = ["半荘ID","日付","開始東家","開始南家","開始西家","開始北家","益田収支_点","益田収支_千点","半荘メモ","状態","作成日時","更新日時"];
+    const rows = sessions().map(s => [s.id,s.date,s.initialSeats.east,s.initialSeats.south,s.initialSeats.west,s.initialSeats.north,s.masudaScorePoint ?? "",s.masudaScoreK ?? "",s.memo ?? "",s.status,s.createdAt,s.updatedAt]);
+    downloadCsv(`sanma_sessions_${today()}.csv`, [header, ...rows]);
+  };
+  window.showCsv = function() {
+    app.innerHTML = `<section class="card"><h2>CSV出力</h2><p class="muted">局ログCSVと半荘CSVを別々に出力します。</p><div class="grid two">${btn("局ログCSVを出力", "exportLogsCsv()", "primary")}${btn("半荘CSVを出力", "exportSessionsCsv()", "primary")}</div></section><section class="card"><h2>現在の件数</h2><p>局ログ：${logs().length}件</p><p>半荘：${sessions().length}件</p></section>`;
+  };
+
+  showHome();
+})();
+</script>
+</body>
+</html>
