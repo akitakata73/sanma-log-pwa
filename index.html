@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=1.9.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=1.9.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=1.9.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=1.9.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=1.9.0" />
+  <link rel="manifest" href="./manifest.json?v=2.1.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.1.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.1.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.1.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.1.0" />
 
   <style>
     :root {
@@ -118,10 +118,17 @@
     .notice { padding: 10px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a; }
     .dangerBox { padding: 10px; border-radius: 12px; background: #fef2f2; border: 1px solid #fecaca; }
     .footerNav {
-      position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,.96);
-      border-top: 1px solid var(--line); padding: 8px; display: flex; gap: 8px; justify-content: center;
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid var(--line);
+      padding: 8px 12px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,.04);
     }
-    .footerNav button { min-height: 42px; padding: 8px 12px; font-size: 13px; }
+    .footerNav button { min-height: 40px; padding: 8px 12px; font-size: 13px; flex: 1 1 92px; max-width: 150px; }
 
     .versionBox { padding: 12px; border-radius: 12px; background: #f9fafb; border: 1px solid var(--line); font-size: 14px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
@@ -211,14 +218,27 @@
     .resumeBlock ul { margin: 8px 0 0 20px; padding: 0; }
     .resumeBlock li { margin: 5px 0; }
 
+
+    .pointDisabled {
+      background: #e5e7eb !important;
+      color: #9ca3af !important;
+      border-color: #d1d5db !important;
+      cursor: not-allowed !important;
+      opacity: .72;
+    }
+    .pointHelp {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 6px 0 8px;
+    }
+
   </style>
 </head>
 <body>
   <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.9.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.1.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
-  <main id="app"></main>
   <nav class="footerNav">
     <button onclick="showHome()">ホーム</button>
     <button onclick="showCurrentOrNew()">進行中</button>
@@ -226,15 +246,16 @@
     <button onclick="showAppUpdate()">更新</button>
     <button onclick="showSystem()">システム</button>
   </nav>
+  <main id="app"></main>
 
 <script>
 (() => {
-  const APP_VERSION = "1.9.0";
+  const APP_VERSION = "2.1.0";
   const DATA_SCHEMA_VERSION = 3;
   const KEY_SETTINGS = "sanma_log_pwa_settings";
   const KEY_BACKUP_PREFIX = "sanma_log_pwa_backup_before_migration_";
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
-  const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,48000,96000];
+  const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
   const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
   const TAGS = {
     win: ["4000拾い", "高打点成功", "親活用", "親流し成功", "ミスなし", "不明"],
@@ -608,11 +629,60 @@
     };
   }
 
-  function btn(label, onclick, cls="") {
-    return `<button class="${cls}" onclick="${onclick}">${esc(label)}</button>`;
+  function btn(label, onclick, cls="", disabled=false) {
+    return `<button class="${cls}" onclick="${onclick}" ${disabled ? "disabled" : ""}>${esc(label)}</button>`;
   }
-  function renderPointButtons(varName="point") {
-    return `<div class="grid three">${POINTS.map(p => btn(`${p}点`, `selectPoint(${p})`, inputDraft[varName] === p ? "selected" : "")).join("")}</div>`;
+  function pointSet(type) {
+    const sets = {
+      childWin: [1000,2000,4000,8000,12000,16000,24000,32000,64000,96000],
+      parentWin: [1000,3000,6000,12000,18000,24000,36000,48000,96000],
+      parentTsumoLossPay: [1000,2000,3000,6000,9000,12000,18000,24000,48000],
+      childTsumoLossPay: [1000,2000,4000,6000,8000,12000,16000,32000,48000]
+    };
+    return sets[type] || POINTS;
+  }
+  function allowedPointsForCurrentInput(session) {
+    const result = inputDraft.resultType;
+    const r = currentRoles(session);
+    const masudaDealer = r.east === "益田";
+
+    if (result === "ロン和了" || result === "ツモ和了") {
+      return pointSet(masudaDealer ? "parentWin" : "childWin");
+    }
+
+    if (result === "ロン放銃") {
+      if (!inputDraft.opponent) return [];
+      const opponentDealer = r.east === inputDraft.opponent;
+      return pointSet(opponentDealer ? "parentWin" : "childWin");
+    }
+
+    if (result === "ツモられ") {
+      if (!inputDraft.opponent) return [];
+      const opponentDealer = r.east === inputDraft.opponent;
+      return pointSet(opponentDealer ? "parentTsumoLossPay" : "childTsumoLossPay");
+    }
+
+    return POINTS;
+  }
+  function isPointAllowed(session, point) {
+    if (inputDraft.isIrregularPoint) return true;
+    return allowedPointsForCurrentInput(session).includes(Number(point));
+  }
+  function renderPointButtons(varName="point", session=null) {
+    const allowed = session ? allowedPointsForCurrentInput(session) : POINTS;
+    const needsOpponent = ["ロン放銃", "ツモられ"].includes(inputDraft.resultType);
+    const help = needsOpponent && !inputDraft.opponent
+      ? `<div class="pointHelp">先に相手を選ぶと、使える点数だけ押せるようになります。</div>`
+      : `<div class="pointHelp">この局面で使わない点数は灰色で表示し、選択できません。</div>`;
+    const buttons = POINTS.map(p => {
+      const disabled = !allowed.includes(p);
+      const cls = inputDraft[varName] === p ? "selected" : disabled ? "pointDisabled" : "";
+      return btn(`${p}点`, `selectPoint(${p})`, cls, disabled);
+    }).join("");
+    const irregular = inputDraft.isIrregularPoint
+      ? `<div class="notice">イレギュラー点数：<strong>${inputDraft.point}点</strong></div>`
+      : "";
+    return `${help}<div class="grid three">${buttons}</div><div class="row" style="margin-top:8px;">${btn("イレギュラー入力", "selectIrregularPoint()", "soft")}${inputDraft.isIrregularPoint ? btn("通常点数に戻す", "clearIrregularPoint()") : ""}</div>${irregular}`;
   }
   function renderChoiceButtons(list, fnName, current="") {
     return `<div class="grid three">${list.map(x => btn(x, `${fnName}('${x}')`, current === x ? "selected" : "")).join("")}</div>`;
@@ -774,11 +844,42 @@
   }
 
   window.startInput = function(sessionId, resultType) {
-    inputDraft = { sessionId, resultType, opponent: "", point: null, stance: "", tag: "", tenpaiPlayers: [] };
+    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, stance: "", tag: "", tenpaiPlayers: [] };
     renderInputForm();
   };
-  window.selectOpponent = function(name) { inputDraft.opponent = name; renderInputForm(); };
-  window.selectPoint = function(point) { inputDraft.point = point; renderInputForm(); };
+  window.selectOpponent = function(name) {
+    inputDraft.opponent = name;
+    inputDraft.isIrregularPoint = false;
+    const session = sessions().find(s => s.id === inputDraft.sessionId);
+    if (session && inputDraft.point && !isPointAllowed(session, inputDraft.point)) {
+      inputDraft.point = null;
+    }
+    renderInputForm();
+  };
+  window.selectPoint = function(point) {
+    const session = sessions().find(s => s.id === inputDraft.sessionId);
+    if (session && !allowedPointsForCurrentInput(session).includes(Number(point))) return;
+    inputDraft.point = point;
+    inputDraft.isIrregularPoint = false;
+    renderInputForm();
+  };
+  window.selectIrregularPoint = function() {
+    const raw = prompt("イレギュラー点数を入力してください。例：72000");
+    if (raw == null) return;
+    const n = Number(String(raw).replace(/[^0-9]/g, ""));
+    if (!Number.isFinite(n) || n <= 0 || n % 1000 !== 0) {
+      alert("1000点単位の正の数で入力してください。");
+      return;
+    }
+    inputDraft.point = n;
+    inputDraft.isIrregularPoint = true;
+    renderInputForm();
+  };
+  window.clearIrregularPoint = function() {
+    inputDraft.point = null;
+    inputDraft.isIrregularPoint = false;
+    renderInputForm();
+  };
   window.selectStance = function(stance) { inputDraft.stance = stance; renderInputForm(); };
   window.selectTag = function(tag) { inputDraft.tag = tag; renderInputForm(); };
   window.toggleTenpai = function(name) {
@@ -813,7 +914,7 @@
     }
     const opponentLabel = result === "ロン和了" ? "誰から？" : result === "ロン放銃" ? "誰へ？" : result === "ツモられ" ? "誰にツモられ？" : "";
     const pointLabel = result === "ツモ和了" ? "益田の総収入" : result === "ツモられ" ? "益田の支払い" : result === "ロン放銃" ? "失点" : "打点";
-    const ready = isDraw ? (inputDraft.stance && inputDraft.tag) : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && inputDraft.stance && inputDraft.tag);
+    const ready = isDraw ? (inputDraft.stance && inputDraft.tag) : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)) && inputDraft.stance && inputDraft.tag);
     app.innerHTML = `
       <section class="card">
         ${renderCurrentStatus(session)}
@@ -822,7 +923,7 @@
         ${renderTableView(session, true)}
         ${result === "ツモ和了" ? `<p>支払い者：${others.map(o => `<span class="pill">${esc(o)}</span>`).join(" ")}</p>` : ""}
         ${needsOpponent ? `<h3>${opponentLabel}</h3>${renderChoiceButtons(others, "selectOpponent", inputDraft.opponent)}` : ""}
-        ${isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point")}`}
+        ${isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point", session)}`}
         ${scorePreview}
         <h3>対局姿勢</h3>${renderChoiceButtons(STANCES, "selectStance", inputDraft.stance)}
         <h3>主観タグ</h3>${renderChoiceButtons(tagListFor(result), "selectTag", inputDraft.tag)}
