@@ -2,17 +2,17 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>三麻ログPWA</title>
   <meta name="theme-color" content="#FDFF00" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.2.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.2.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.2.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.2.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.2.0" />
+  <link rel="manifest" href="./manifest.json?v=2.3.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.3.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.3.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.3.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.3.0" />
 
   <style>
     :root {
@@ -27,6 +27,7 @@
       --danger: #b91c1c;
       --ok: #047857;
       --soft: #f3f4f6;
+      --safe-bottom: env(safe-area-inset-bottom);
     }
     * { box-sizing: border-box; }
     body {
@@ -242,25 +243,122 @@
       margin: 6px 0 8px;
     }
 
+
+    /* v2.3.0: エケベリア管理アプリ寄せのアプリシェル */
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+    .appShell {
+      max-width: 520px;
+      margin: 0 auto;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: rgba(246,247,249,.94);
+      backdrop-filter: blur(10px);
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid rgba(209,213,219,.72);
+      text-align: left;
+    }
+    header h1 {
+      font-size: 22px;
+      margin: 0;
+      font-weight: 850;
+      line-height: 1.2;
+    }
+    header .sub {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-top: 3px;
+    }
+    main {
+      flex: 1;
+      padding: 0 14px 92px;
+      max-width: none;
+      margin: 0;
+      width: 100%;
+    }
+    .footerNav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      max-width: 520px;
+      height: 78px;
+      padding: 0 0 var(--safe-bottom);
+      background: rgba(255,255,255,.96);
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0;
+      box-shadow: none;
+      z-index: 20;
+    }
+    .footerNav button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      min-height: auto;
+      height: 78px;
+      padding: 7px 2px calc(7px + var(--safe-bottom));
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #6b7280;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.1;
+      width: 100%;
+      box-shadow: none;
+    }
+    .footerNav button::first-line {
+      font-size: 20px;
+    }
+    .footerNav button:active,
+    .footerNav button:hover {
+      background: rgba(253,255,0,.18);
+      color: #111827;
+    }
+    .card {
+      border-radius: 18px;
+      margin: 12px 0;
+      padding: 14px;
+    }
+
   </style>
 </head>
 <body>
-  <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.2.0</span></h1>
+<div class="appShell">
+<header>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.3.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
   <nav class="footerNav">
-    <button onclick="showHome()">ホーム</button>
-    <button onclick="showCurrentOrNew()">進行中</button>
-    <button onclick="showCsv()">CSV</button>
-    <button onclick="showAppUpdate()">更新</button>
-    <button onclick="showSystem()">システム</button>
+    <button onclick="showHome()"><span style="font-size:20px">🏠</span><span>ホーム</span></button>
+    <button onclick="showCurrentOrNew()"><span style="font-size:20px">🀄</span><span>進行中</span></button>
+    <button onclick="showCsv()"><span style="font-size:20px">📄</span><span>CSV</span></button>
+    <button onclick="showAppUpdate()"><span style="font-size:20px">↻</span><span>更新</span></button>
+    <button onclick="showSystem()"><span style="font-size:20px">⚙️</span><span>設定</span></button>
   </nav>
 
 <script>
 (() => {
-  const APP_VERSION = "2.2.0";
+  const APP_VERSION = "2.3.0";
   const DATA_SCHEMA_VERSION = 3;
   const KEY_SETTINGS = "sanma_log_pwa_settings";
   const KEY_BACKUP_PREFIX = "sanma_log_pwa_backup_before_migration_";
@@ -1287,5 +1385,6 @@
   showHome();
 })();
 </script>
+</div>
 </body>
 </html>
