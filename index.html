@@ -431,6 +431,41 @@
     all.push(log);
     setLogs(all);
   }
+  function activeLogsForSession(sessionId) {
+    return logs()
+      .filter(l => l.sessionId === sessionId && l.isCanceled !== true)
+      .sort((a,b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+  }
+  function lastActiveLog(sessionId) {
+    const ls = activeLogsForSession(sessionId);
+    return ls.length ? ls[ls.length - 1] : null;
+  }
+  function formatDelta(point) {
+    const n = Number(point || 0);
+    return n > 0 ? `+${n}点` : `${n}点`;
+  }
+  function summarizeLog(l) {
+    if (!l) return `<div class="previousLog"><div class="title">前回結果</div><div class="body muted">この半荘の前回ログはまだありません。</div></div>`;
+    const detail = [
+      l.opponent ? esc(l.opponent) : "",
+      Number(l.scoreDeltaPoint || 0) !== 0 ? formatDelta(l.scoreDeltaPoint) : "0点",
+      l.stance ? `姿勢：${esc(l.stance)}` : "",
+      l.subjectiveTag ? `タグ：${esc(l.subjectiveTag)}` : "",
+      l.tenpaiPlayers && l.tenpaiPlayers.length ? `テンパイ：${esc(l.tenpaiPlayers.join("・"))}` : ""
+    ].filter(Boolean).join(" / ");
+    return `<div class="previousLog">
+      <div class="title">前回結果</div>
+      <div class="body"><strong>${esc(l.roundLabel || "")}</strong>　${esc(l.resultType || "")}${detail ? "　" + detail : ""}</div>
+      <div class="meta">作成：${esc(l.createdAt || "")}</div>
+    </div>`;
+  }
+  function renderCurrentStatus(session) {
+    const r = currentRoles(session);
+    return `<div class="currentStatus">
+      <div class="big">現在入力中：${esc(roundLabel(session))}</div>
+      <div class="small">親：${esc(r.east)}　北家：${esc(r.north)}（抜け番）　益田：${esc(masudaRole(session))}</div>
+    </div>`;
+  }
   function currentRoles(session) {
     const seats = session.seats;
     const di = session.current.dealerIndex;
@@ -660,11 +695,13 @@
     const masudaJoined = r.north !== "益田";
     app.innerHTML = `
       <section class="card">
-        <h2>${esc(roundLabel(session))}</h2>
+        ${renderCurrentStatus(session)}
         <p class="muted">${esc(session.sessionLabel || session.date)}</p>
-        <p><span class="pill black">親：${esc(r.east)}</span> <span class="pill">北家：${esc(r.north)}（抜け番）</span></p>
         <p>参加者：${ps.map(p => `<span class="pill yellow">${esc(p)}</span>`).join(" ")}</p>
-        <p>益田：<strong>${esc(masudaRole(session))}</strong></p>
+        ${summarizeLog(lastActiveLog(session.id))}
+        <div class="grid two">
+          ${btn("直前局を取り消して戻る", `undoLastRound('${session.id}')`, "danger")}
+        </div>
       </section>
       ${renderTableView(session)}
       ${masudaJoined ? renderResultSelect(session) : renderMasudaAbsent(session)}
@@ -747,8 +784,9 @@
     const ready = isDraw ? (inputDraft.stance && inputDraft.tag) : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && inputDraft.stance && inputDraft.tag);
     app.innerHTML = `
       <section class="card">
-        <h2>${esc(roundLabel(session))}：${esc(result)}</h2>
-        <p class="muted">親：${esc(currentRoles(session).east)} / 北家：${esc(currentRoles(session).north)}</p>
+        ${renderCurrentStatus(session)}
+        <h2>${esc(result)}</h2>
+        ${summarizeLog(lastActiveLog(session.id))}
         ${renderTableView(session)}
         ${result === "ツモ和了" ? `<p>支払い者：${others.map(o => `<span class="pill">${esc(o)}</span>`).join(" ")}</p>` : ""}
         ${needsOpponent ? `<h3>${opponentLabel}</h3>${renderChoiceButtons(others, "selectOpponent", inputDraft.opponent)}` : ""}
@@ -821,6 +859,52 @@
     log.subjectiveTag = "ミスなし";
     addLog(log);
     renderNextStep(sessionId, "被害なしとして記録しました。");
+  };
+
+  window.undoLastRound = function(sessionId) {
+    const session = sessions().find(s => s.id === sessionId);
+    if (!session) return showHome();
+    if (session.status !== "in_progress") {
+      alert("終了済みの半荘では、直前局へ戻る機能は使用できません。");
+      return;
+    }
+    const last = lastActiveLog(sessionId);
+    if (!last) {
+      alert("取り消せる直前ログがありません。");
+      return;
+    }
+    if (!last.currentSnapshot) {
+      alert("この直前ログには復元情報がありません。v1.7.0以降に保存した局から使用できます。");
+      return;
+    }
+    const msg = `直前の局ログを取消済みにし、この局へ戻ります。\n\n対象：${last.roundLabel || ""} / ${last.resultType || ""} / ${formatDelta(last.scoreDeltaPoint)}\n\nこの操作は通常CSVには反映されません。よろしいですか？`;
+    if (!confirm(msg)) return;
+
+    const allLogs = logs();
+    const idx = allLogs.findIndex(l => l.id === last.id);
+    if (idx >= 0) {
+      allLogs[idx] = {
+        ...allLogs[idx],
+        isCanceled: true,
+        canceledAt: nowText(),
+        cancelReason: "直前局へ戻る"
+      };
+      setLogs(allLogs);
+    }
+
+    const allSessions = sessions();
+    const sidx = allSessions.findIndex(s => s.id === sessionId);
+    if (sidx >= 0) {
+      allSessions[sidx].current = {
+        field: last.currentSnapshot.field,
+        roundNumber: Number(last.currentSnapshot.roundNumber || 1),
+        repeatCount: Number(last.currentSnapshot.repeatCount || 0),
+        dealerIndex: Number(last.currentSnapshot.dealerIndex || 0)
+      };
+      allSessions[sidx].updatedAt = nowText();
+      setSessions(allSessions);
+    }
+    showRound(sessionId);
   };
 
   function renderNextStep(sessionId, message) {
@@ -916,7 +1000,7 @@
   };
 
   window.showLogList = function() {
-    const ls = logs().slice().reverse();
+    const ls = logs().filter(l => l.isCanceled !== true).slice().reverse();
     app.innerHTML = `<section class="card"><h2>局ログ一覧</h2>${ls.length ? `<table><thead><tr><th>局</th><th>結果</th><th>点数</th><th>姿勢/タグ</th><th></th></tr></thead><tbody>${ls.map(l => `<tr><td>${esc(l.date)}<br>${esc(l.roundLabel)}<br>親:${esc(l.dealer)} 北:${esc(l.northPlayer)}</td><td>${esc(l.resultType)}<br>${esc(l.opponent || l.skipReason || "")}</td><td>${l.scoreDeltaPoint > 0 ? "+" : ""}${l.scoreDeltaPoint}</td><td>${esc(l.stance || "")}<br>${esc(l.subjectiveTag || "")}</td><td>${btn("削除", `deleteLog('${l.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ局ログがありません。</p>`}</section>`;
   };
   window.deleteLog = function(logId) { setLogs(logs().filter(l => l.id !== logId)); showLogList(); };
@@ -935,7 +1019,7 @@
   }
   window.exportLogsCsv = function() {
     const header = ["半荘ID","局ID","日付","局表示","場","局番号","連荘数","親","北家","参加者","益田参加","スキップ理由","結果","相手","点数移動_点","点数移動_千点","益田親","相手親","対局姿勢","主観タグ","テンパイ者","作成日時"];
-    const rows = logs().map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,l.dealer,l.northPlayer,l.participants,l.masudaJoined,l.skipReason,l.resultType,l.opponent,l.scoreDeltaPoint,l.scoreDeltaK,l.masudaDealer,l.opponentDealer,l.stance,l.subjectiveTag,l.tenpaiPlayers,l.createdAt]);
+    const rows = logs().filter(l => l.isCanceled !== true).map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,l.dealer,l.northPlayer,l.participants,l.masudaJoined,l.skipReason,l.resultType,l.opponent,l.scoreDeltaPoint,l.scoreDeltaK,l.masudaDealer,l.opponentDealer,l.stance,l.subjectiveTag,l.tenpaiPlayers,l.createdAt]);
     downloadCsv(`sanma_round_logs_${today()}.csv`, [header, ...rows]);
   };
   window.exportSessionsCsv = function() {
@@ -944,7 +1028,7 @@
     downloadCsv(`sanma_sessions_${today()}.csv`, [header, ...rows]);
   };
   window.showCsv = function() {
-    app.innerHTML = `<section class="card"><h2>CSV出力</h2><p class="muted">局ログCSVと半荘CSVを別々に出力します。</p><div class="grid two">${btn("局ログCSVを出力", "exportLogsCsv()", "primary")}${btn("半荘CSVを出力", "exportSessionsCsv()", "primary")}</div></section><section class="card"><h2>現在の件数</h2><p>局ログ：${logs().length}件</p><p>半荘：${sessions().length}件</p></section>`;
+    app.innerHTML = `<section class="card"><h2>CSV出力</h2><p class="muted">局ログCSVと半荘CSVを別々に出力します。</p><div class="grid two">${btn("局ログCSVを出力", "exportLogsCsv()", "primary")}${btn("半荘CSVを出力", "exportSessionsCsv()", "primary")}</div></section><section class="card"><h2>現在の件数</h2><p>局ログ：${logs().filter(l => l.isCanceled !== true).length}件（取消済み除外）</p><p>取消済みログ：${logs().filter(l => l.isCanceled === true).length}件</p><p>半荘：${sessions().length}件</p></section>`;
   };
 
 
@@ -964,7 +1048,7 @@
           <p><strong>アプリバージョン：</strong><span class="mono">${esc(APP_VERSION)}</span></p>
           <p><strong>データ形式：</strong><span class="mono">schema v${esc(DATA_SCHEMA_VERSION)}</span></p>
           <p><strong>最終データ更新：</strong>${esc(st.lastMigrationAt || "未実行")}</p>
-          <p><strong>半荘データ：</strong>${ss.length}件　<strong>局ログ：</strong>${ls.length}件</p>
+          <p><strong>半荘データ：</strong>${ss.length}件　<strong>局ログ：</strong>${ls.filter(l => l.isCanceled !== true).length}件　<strong>取消済み：</strong>${ls.filter(l => l.isCanceled === true).length}件</p>
           <p><strong>バックアップ：</strong>${backupKeys.length}件</p>
         </div>
       </section>
