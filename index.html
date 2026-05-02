@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.4.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.4.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.4.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.4.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.4.0" />
+  <link rel="manifest" href="./manifest.json?v=2.6.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.6.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.6.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.6.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.6.0" />
 
   <style>
     :root {
@@ -339,12 +339,63 @@
       padding: 14px;
     }
 
+
+    .scoreCard {
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      margin: 10px 0;
+      box-shadow: 0 4px 14px rgba(0,0,0,.05);
+    }
+    .scoreCard h3 { margin: 0 0 8px; font-size: 15px; }
+    .scoreGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .scoreBox {
+      padding: 9px 7px;
+      border-radius: 13px;
+      border: 1px solid var(--line);
+      background: #f9fafb;
+      text-align: center;
+      min-height: 72px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .scoreLabel {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .scoreValue {
+      font-size: 18px;
+      line-height: 1.15;
+      font-weight: 900;
+      color: #111827;
+    }
+    .scorePositive { background: #ecfdf5; border-color: #a7f3d0; }
+    .scorePositive .scoreValue { color: #047857; }
+    .scoreNegative { background: #fef2f2; border-color: #fecaca; }
+    .scoreNegative .scoreValue { color: #b91c1c; }
+    .scoreZero { background: #f3f4f6; border-color: #e5e7eb; }
+    .scoreAfterGain { box-shadow: 0 0 0 2px rgba(16,185,129,.14) inset; }
+    .scoreAfterLoss { box-shadow: 0 0 0 2px rgba(239,68,68,.14) inset; }
+    .scoreNote { margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    @media (max-width: 430px) {
+      .scoreGrid { grid-template-columns: 1fr; }
+      .scoreBox { min-height: 58px; }
+    }
+
   </style>
 </head>
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.4.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.6.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -358,10 +409,8 @@
 
 <script>
 (() => {
-  const APP_VERSION = "2.4.0";
+  const APP_VERSION = "2.6.0";
   const DATA_SCHEMA_VERSION = 6;
-  const KEY_SETTINGS = "sanma_log_pwa_settings";
-  const KEY_BACKUP_PREFIX = "sanma_log_pwa_backup_before_migration_";
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
   const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
@@ -389,140 +438,6 @@
   function setSessions(v) { save(KEY_SESSIONS, v); }
   function setLogs(v) { save(KEY_LOGS, v); }
 
-  function settings() { return load(KEY_SETTINGS, {}); }
-  function setSettings(v) { save(KEY_SETTINGS, v); }
-  function hasSchemaUpdateNeeded() {
-    const st = settings();
-    return st.dataSchemaVersion !== DATA_SCHEMA_VERSION;
-  }
-  function schemaStatusHtml() {
-    if (hasSchemaUpdateNeeded()) {
-      return `<div class="statusWarn"><strong>保存データ形式補正推奨</strong><br>システム画面から「保存データ形式を現在形式に補正」を一度実行してください。既存データは削除せず、実行前に自動バックアップを作成します。</div>`;
-    }
-    return `<div class="statusOk">データ形式：最新版です。</div>`;
-  }
-
-  function safeArray(v) { return Array.isArray(v) ? v : []; }
-
-  function normalizeSession(s) {
-    const seats = safeArray(s?.seats);
-    const initial = s?.initialSeats || {};
-    const fallbackSeats = seats.length === 4 ? seats : [
-      initial.east || "",
-      initial.south || "",
-      initial.west || "",
-      initial.north || ""
-    ];
-    const ns = {
-      id: s?.id || id("H"),
-      date: s?.date || today(),
-      seats: fallbackSeats,
-      initialSeats: {
-        east: initial.east || fallbackSeats[0] || "",
-        south: initial.south || fallbackSeats[1] || "",
-        west: initial.west || fallbackSeats[2] || "",
-        north: initial.north || fallbackSeats[3] || ""
-      },
-      current: {
-        field: s?.current?.field || "東場",
-        roundNumber: Number(s?.current?.roundNumber ?? 1),
-        repeatCount: Number(s?.current?.repeatCount ?? 0),
-        dealerIndex: Number(s?.current?.dealerIndex ?? 0)
-      },
-      masudaScorePoint: s?.masudaScorePoint ?? (s?.masudaScoreK == null ? null : Number(s.masudaScoreK) * 1000),
-      masudaScoreK: s?.masudaScoreK ?? (s?.masudaScorePoint == null ? null : Math.round(Number(s.masudaScorePoint) / 1000)),
-      memo: s?.memo ?? "",
-      status: s?.status || "completed",
-      createdAt: s?.createdAt || nowText(),
-      updatedAt: s?.updatedAt || nowText(),
-      appVersion: APP_VERSION,
-      schemaVersion: DATA_SCHEMA_VERSION
-    };
-    ns.sessionNo = Number(s?.sessionNo || 0) || null;
-    ns.sessionLabel = s?.sessionLabel || "";
-    return { ...s, ...ns, initialSeats: ns.initialSeats, current: ns.current, seats: ns.seats, sessionNo: ns.sessionNo, sessionLabel: ns.sessionLabel };
-  }
-
-  function normalizeLog(l) {
-    const point = Number(l?.scoreDeltaPoint ?? 0);
-    const nl = {
-      id: l?.id || id("L"),
-      sessionId: l?.sessionId || "",
-      date: l?.date || today(),
-      roundLabel: l?.roundLabel || "",
-      field: l?.field || "",
-      roundNumber: Number(l?.roundNumber ?? 0),
-      repeatCount: Number(l?.repeatCount ?? 0),
-      dealer: l?.dealer || "",
-      northPlayer: l?.northPlayer || "",
-      participants: safeArray(l?.participants),
-      masudaJoined: Boolean(l?.masudaJoined),
-      skipReason: l?.skipReason || "",
-      resultType: l?.resultType || "",
-      opponent: l?.opponent || "",
-      scoreDeltaPoint: point,
-      scoreDeltaK: l?.scoreDeltaK ?? Math.round(point / 1000),
-      masudaDealer: Boolean(l?.masudaDealer),
-      opponentDealer: Boolean(l?.opponentDealer),
-      stance: l?.stance || "",
-      subjectiveTag: l?.subjectiveTag || "",
-      subjectiveTags: safeArray((l?.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags : (l?.subjectiveTag ? [l.subjectiveTag] : [])),
-      tenpaiPlayers: safeArray(l?.tenpaiPlayers),
-      createdAt: l?.createdAt || nowText(),
-      appVersion: APP_VERSION,
-      schemaVersion: DATA_SCHEMA_VERSION
-    };
-    return { ...l, ...nl };
-  }
-
-  function createMigrationBackup() {
-    const backup = {
-      createdAt: nowText(),
-      appVersion: APP_VERSION,
-      dataSchemaVersion: DATA_SCHEMA_VERSION,
-      sessions: sessions(),
-      logs: logs(),
-      settings: settings()
-    };
-    const key = KEY_BACKUP_PREFIX + new Date().toISOString().replace(/[:.]/g, "-");
-    save(key, backup);
-    return key;
-  }
-
-  function migrateData({silent=false} = {}) {
-    const beforeSessions = sessions();
-    const beforeLogs = logs();
-    const beforeSettings = settings();
-
-    if (!silent) createMigrationBackup();
-
-    const normalizedSessions = assignMissingSessionNumbers(safeArray(beforeSessions).map(normalizeSession));
-    const normalizedLogs = safeArray(beforeLogs).map(normalizeLog);
-
-    setSessions(normalizedSessions);
-    setLogs(normalizedLogs);
-    setSettings({
-      ...beforeSettings,
-      appVersion: APP_VERSION,
-      dataSchemaVersion: DATA_SCHEMA_VERSION,
-      lastMigrationAt: nowText(),
-      migrationCount: Number(beforeSettings.migrationCount || 0) + (silent ? 0 : 1)
-    });
-
-    return {
-      sessionsBefore: safeArray(beforeSessions).length,
-      sessionsAfter: normalizedSessions.length,
-      logsBefore: safeArray(beforeLogs).length,
-      logsAfter: normalizedLogs.length
-    };
-  }
-
-  function ensureCurrentSchema() {
-    // v1.8.0以降、自動マイグレーションは行わない。
-    // データ形式更新は、システム画面の手動ボタンから実行する。
-    return;
-  }
-
   function id(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
   function today() {
     const d = new Date();
@@ -538,38 +453,6 @@
   }
   function makeSessionLabel(date, no) {
     return `${date} ${no}回目`;
-  }
-  function createdSortValue(s) {
-    return `${s?.date || ""} ${s?.createdAt || ""} ${s?.id || ""}`;
-  }
-  function nextSessionNoForDate(date) {
-    const nums = sessions()
-      .filter(s => s.date === date)
-      .map(s => Number(s.sessionNo || 0))
-      .filter(n => Number.isFinite(n) && n > 0);
-    return nums.length ? Math.max(...nums) + 1 : 1;
-  }
-  function assignMissingSessionNumbers(list) {
-    const grouped = {};
-    list.forEach((s) => {
-      const d = s?.date || today();
-      if (!grouped[d]) grouped[d] = [];
-      grouped[d].push(s);
-    });
-    Object.keys(grouped).forEach(date => {
-      const group = grouped[date].sort((a,b) => createdSortValue(a).localeCompare(createdSortValue(b)));
-      const used = new Set(group.map(s => Number(s.sessionNo || 0)).filter(n => Number.isFinite(n) && n > 0));
-      let next = 1;
-      group.forEach((s) => {
-        if (!s.sessionNo) {
-          while (used.has(next)) next++;
-          s.sessionNo = next;
-          used.add(next);
-        }
-        if (!s.sessionLabel) s.sessionLabel = makeSessionLabel(date, s.sessionNo);
-      });
-    });
-    return list;
   }
   function esc(s) {
     return String(s ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
@@ -599,6 +482,53 @@
   function formatDelta(point) {
     const n = Number(point || 0);
     return n > 0 ? `+${n}点` : `${n}点`;
+  }
+  function formatScore(point) {
+    return `${Number(point || 0).toLocaleString("ja-JP")}点`;
+  }
+  function scoreTone(delta) {
+    const n = Number(delta || 0);
+    return n > 0 ? "scorePositive" : n < 0 ? "scoreNegative" : "scoreZero";
+  }
+  function afterTone(delta) {
+    const n = Number(delta || 0);
+    return n > 0 ? "scoreAfterGain" : n < 0 ? "scoreAfterLoss" : "";
+  }
+  function masudaCurrentScore(sessionId) {
+    const base = 100000;
+    const sum = activeLogsForSession(sessionId).reduce((acc, l) => acc + Number(l.scoreDeltaPoint || 0), 0);
+    return base + sum;
+  }
+  function currentInputDelta(session) {
+    const result = inputDraft.resultType;
+    if (result === "流局") return calcDrawDelta(inputDraft.tenpaiPlayers || [], participants(session));
+    if (!inputDraft.point) return 0;
+    const sign = (result === "ロン放銃" || result === "ツモられ") ? -1 : 1;
+    return sign * Number(inputDraft.point || 0);
+  }
+  function renderScoreCard(session, delta=null, label="今回の変動") {
+    const current = masudaCurrentScore(session.id);
+    const hasDelta = delta !== null && delta !== undefined;
+    const d = hasDelta ? Number(delta || 0) : 0;
+    const after = current + d;
+    return `<div class="scoreCard">
+      <h3>益田の点数確認</h3>
+      <div class="scoreGrid">
+        <div class="scoreBox">
+          <div class="scoreLabel">記録上の現在点</div>
+          <div class="scoreValue">${formatScore(current)}</div>
+        </div>
+        <div class="scoreBox ${hasDelta ? scoreTone(d) : "scoreZero"}">
+          <div class="scoreLabel">${esc(label)}</div>
+          <div class="scoreValue">${hasDelta ? formatDelta(d) : "未入力"}</div>
+        </div>
+        <div class="scoreBox ${hasDelta ? `${scoreTone(d)} ${afterTone(d)}` : "scoreZero"}">
+          <div class="scoreLabel">反映後</div>
+          <div class="scoreValue">${hasDelta ? formatScore(after) : "未確定"}</div>
+        </div>
+      </div>
+      <div class="scoreNote">半荘開始時を100,000点として、有効局ログのみから計算します。取消済みログ、スキップ、被害なしは点数変動に含めません。</div>
+    </div>`;
   }
   function summarizeLog(l) {
     if (!l) return `<div class="previousLog"><div class="title">前回結果</div><div class="body muted">この半荘の前回ログはまだありません。</div></div>`;
@@ -913,7 +843,7 @@
         ${renderCurrentStatus(session)}
         <p class="muted">${esc(session.sessionLabel || session.date)}</p>
         <p>参加者：${ps.map(p => `<span class="pill yellow">${esc(p)}</span>`).join(" ")}</p>
-        ${schemaStatusHtml()}
+        ${renderScoreCard(session)}
         ${summarizeLog(lastActiveLog(session.id))}
         <div class="grid two">
           ${btn("直前局を取り消して戻る", `undoLastRound('${session.id}')`, lastActiveLog(session.id) ? "danger" : "soft")}
@@ -1025,13 +955,8 @@
     const ps = participants(session);
     const needsOpponent = ["ロン和了", "ロン放銃", "ツモられ"].includes(result);
     const isDraw = result === "流局";
-    let scorePreview = "";
-    if (isDraw) scorePreview = `<div class="notice">益田の点数移動：<strong>${calcDrawDelta(inputDraft.tenpaiPlayers, ps)}点</strong></div>`;
-    else if (inputDraft.point) {
-      const sign = (result === "ロン放銃" || result === "ツモられ") ? -1 : 1;
-      const val = sign * inputDraft.point;
-      scorePreview = `<div class="notice">点数移動：<strong>${val > 0 ? "+" : ""}${val}点</strong></div>`;
-    }
+    const deltaPreview = isDraw ? currentInputDelta(session) : (inputDraft.point ? currentInputDelta(session) : null);
+    const scorePreview = renderScoreCard(session, deltaPreview);
     const opponentLabel = result === "ロン和了" ? "誰から？" : result === "ロン放銃" ? "誰へ？" : result === "ツモられ" ? "誰にツモられ？" : "";
     const pointLabel = result === "ツモ和了" ? "益田の総収入" : result === "ツモられ" ? "益田の支払い" : result === "ロン放銃" ? "失点" : "打点";
     const ready = isDraw ? !!inputDraft.stance : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)) && inputDraft.stance);
@@ -1344,58 +1269,30 @@
   };
 
   window.showSystem = function() {
-    const st = settings();
     const ss = sessions();
     const ls = logs();
-    const backupKeys = [];
-    for (let i=0; i<localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(KEY_BACKUP_PREFIX)) backupKeys.push(k);
-    }
     app.innerHTML = `
       <section class="card">
         <h2>システム</h2>
         <div class="versionBox">
           <p><strong>アプリバージョン：</strong><span class="mono">${esc(APP_VERSION)}</span></p>
-          <p><strong>データ形式：</strong><span class="mono">schema v${esc(DATA_SCHEMA_VERSION)}</span></p>
-          <p><strong>現在の保存データ形式：</strong><span class="mono">schema v${esc(st.dataSchemaVersion || "未設定")}</span></p>
-          <p><strong>最終データ更新：</strong>${esc(st.lastMigrationAt || "未実行")}</p>
+          <p><strong>保存データ：</strong>現行仕様で新規運用</p>
           <p><strong>半荘データ：</strong>${ss.length}件　<strong>局ログ：</strong>${ls.filter(l => l.isCanceled !== true).length}件　<strong>取消済み：</strong>${ls.filter(l => l.isCanceled === true).length}件</p>
-          <p><strong>バックアップ：</strong>${backupKeys.length}件</p>
         </div>
-        ${schemaStatusHtml()}
-      </section>
-      <section class="card">
-        <h2>保存データ形式補正</h2>
-        <p class="muted">保存済みの半荘データ・局ログについて、不足項目を現在のデータ形式に合わせて補正します。アプリ本体を更新する機能ではありません。保存キーは変更せず、既存データを消去しません。</p>
-        <div class="warnBox">
-          <p><strong>実行前に自動バックアップを作成します。</strong></p>
-          <p class="muted">過去データの削除や localStorage.clear() は行いません。</p>
-        </div>
-        <div class="grid two">
-          ${btn("保存データ形式を現在形式に補正", "runDataMigration()", "primary")}
-          ${btn("CSV出力へ", "showCsv()")}
+        <div class="notice">
+          実データ未入力の段階で旧データ補正機能を整理した版です。今後は、アプリ本体の更新は「更新」画面、記録データの確認はCSV出力で行います。
         </div>
       </section>
       <section class="card">
         <h2>現在の保存キー</h2>
         <p class="mono">${esc(KEY_SESSIONS)}</p>
         <p class="mono">${esc(KEY_LOGS)}</p>
-        <p class="mono">${esc(KEY_SETTINGS)}</p>
         <p class="mono">${esc(KEY_DRAFT)}</p>
       </section>
     `;
   };
 
-  window.runDataMigration = function() {
-    if (!confirm("保存済みデータの形式だけを補正します。アプリ本体のバージョン更新ではありません。実行前に自動バックアップを作成します。よろしいですか？")) return;
-    const result = migrateData({silent:false});
-    alert(`保存データ形式補正完了\n半荘：${result.sessionsBefore}件 → ${result.sessionsAfter}件\n局ログ：${result.logsBefore}件 → ${result.logsAfter}件`);
-    showSystem();
-  };
 
-
-  ensureCurrentSchema();
   showHome();
 })();
 </script>
