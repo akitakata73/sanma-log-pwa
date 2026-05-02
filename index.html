@@ -129,7 +129,7 @@
 </head>
 <body>
   <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.4.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.5.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -142,8 +142,8 @@
 
 <script>
 (() => {
-  const APP_VERSION = "1.4.0";
-  const DATA_SCHEMA_VERSION = 2;
+  const APP_VERSION = "1.5.0";
+  const DATA_SCHEMA_VERSION = 3;
   const KEY_SETTINGS = "sanma_log_pwa_settings";
   const KEY_BACKUP_PREFIX = "sanma_log_pwa_backup_before_migration_";
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
@@ -212,7 +212,9 @@
       appVersion: APP_VERSION,
       schemaVersion: DATA_SCHEMA_VERSION
     };
-    return { ...s, ...ns, initialSeats: ns.initialSeats, current: ns.current, seats: ns.seats };
+    ns.sessionNo = Number(s?.sessionNo || 0) || null;
+    ns.sessionLabel = s?.sessionLabel || "";
+    return { ...s, ...ns, initialSeats: ns.initialSeats, current: ns.current, seats: ns.seats, sessionNo: ns.sessionNo, sessionLabel: ns.sessionLabel };
   }
 
   function normalizeLog(l) {
@@ -267,7 +269,7 @@
 
     if (!silent) createMigrationBackup();
 
-    const normalizedSessions = safeArray(beforeSessions).map(normalizeSession);
+    const normalizedSessions = assignMissingSessionNumbers(safeArray(beforeSessions).map(normalizeSession));
     const normalizedLogs = safeArray(beforeLogs).map(normalizeLog);
 
     setSessions(normalizedSessions);
@@ -307,6 +309,41 @@
     const d = new Date();
     const pad = n => String(n).padStart(2,"0");
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function makeSessionLabel(date, no) {
+    return `${date} ${no}回目`;
+  }
+  function createdSortValue(s) {
+    return `${s?.date || ""} ${s?.createdAt || ""} ${s?.id || ""}`;
+  }
+  function nextSessionNoForDate(date) {
+    const nums = sessions()
+      .filter(s => s.date === date)
+      .map(s => Number(s.sessionNo || 0))
+      .filter(n => Number.isFinite(n) && n > 0);
+    return nums.length ? Math.max(...nums) + 1 : 1;
+  }
+  function assignMissingSessionNumbers(list) {
+    const grouped = {};
+    list.forEach((s) => {
+      const d = s?.date || today();
+      if (!grouped[d]) grouped[d] = [];
+      grouped[d].push(s);
+    });
+    Object.keys(grouped).forEach(date => {
+      const group = grouped[date].sort((a,b) => createdSortValue(a).localeCompare(createdSortValue(b)));
+      const used = new Set(group.map(s => Number(s.sessionNo || 0)).filter(n => Number.isFinite(n) && n > 0));
+      let next = 1;
+      group.forEach((s) => {
+        if (!s.sessionNo) {
+          while (used.has(next)) next++;
+          s.sessionNo = next;
+          used.add(next);
+        }
+        if (!s.sessionLabel) s.sessionLabel = makeSessionLabel(date, s.sessionNo);
+      });
+    });
+    return list;
   }
   function esc(s) {
     return String(s ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
@@ -410,7 +447,7 @@
       </section>
       <section class="card">
         <h2>現在の状況</h2>
-        ${active ? `<p><span class="pill black">進行中</span> ${esc(active.date)} / ${esc(roundLabel(active))}</p><p>親：${esc(currentRoles(active).east)}　北家：${esc(currentRoles(active).north)}</p>` : `<p class="muted">進行中の半荘はありません。</p>`}
+        ${active ? `<p><span class="pill black">進行中</span> ${esc(active.sessionLabel || active.date)} / ${esc(roundLabel(active))}</p><p>親：${esc(currentRoles(active).east)}　北家：${esc(currentRoles(active).north)}</p>` : `<p class="muted">進行中の半荘はありません。</p>`}
         <p class="muted">半荘数：${ss.length} / 局ログ数：${ls.length}</p>
       </section>
     `;
@@ -468,9 +505,13 @@
 
   window.startSession = function() {
     if (!(seatDraft.east && seatDraft.south && seatDraft.west && seatDraft.north)) return;
+    const sessionDate = today();
+    const sessionNo = nextSessionNoForDate(sessionDate);
     const session = {
       id: id("H"),
-      date: today(),
+      date: sessionDate,
+      sessionNo,
+      sessionLabel: makeSessionLabel(sessionDate, sessionNo),
       seats: [seatDraft.east, seatDraft.south, seatDraft.west, seatDraft.north],
       initialSeats: { east: seatDraft.east, south: seatDraft.south, west: seatDraft.west, north: seatDraft.north },
       current: { field: "東場", roundNumber: 1, repeatCount: 0, dealerIndex: 0 },
@@ -494,6 +535,7 @@
     app.innerHTML = `
       <section class="card">
         <h2>${esc(roundLabel(session))}</h2>
+        <p class="muted">${esc(session.sessionLabel || session.date)}</p>
         <p><span class="pill black">親：${esc(r.east)}</span> <span class="pill">北家：${esc(r.north)}（抜け番）</span></p>
         <p>参加者：${ps.map(p => `<span class="pill yellow">${esc(p)}</span>`).join(" ")}</p>
         <p>益田：<strong>${esc(masudaRole(session))}</strong></p>
@@ -528,6 +570,7 @@
         ${btn("ツモ和了", `startInput('${session.id}','ツモ和了')`, "ok")}
         ${btn("ロン放銃", `startInput('${session.id}','ロン放銃')`, "danger")}
         ${btn("ツモられ", `startInput('${session.id}','ツモられ')`, "danger")}
+        ${btn("被害なし", `saveNoDamage('${session.id}')`, "accent")}
         ${btn("流局", `startInput('${session.id}','流局')`)}
         ${btn("入力できずスキップ", `saveSkip('${session.id}','入力困難')`, "soft")}
       </div>
@@ -640,6 +683,18 @@
     renderNextStep(sessionId, `${reason}として記録しました。`);
   };
 
+  window.saveNoDamage = function(sessionId) {
+    const session = sessions().find(s => s.id === sessionId);
+    if (!session) return showHome();
+    const log = baseLog(session, "被害なし");
+    log.scoreDeltaPoint = 0;
+    log.scoreDeltaK = 0;
+    log.stance = "不明";
+    log.subjectiveTag = "ミスなし";
+    addLog(log);
+    renderNextStep(sessionId, "被害なしとして記録しました。");
+  };
+
   function renderNextStep(sessionId, message) {
     const session = sessions().find(s => s.id === sessionId);
     app.innerHTML = `<section class="card"><h2>${esc(message)}</h2><p>${esc(roundLabel(session))}</p><div class="grid two">${btn("親継続", `continueDealer('${sessionId}')`, "accent")}${btn("親流れ", `rotateDealer('${sessionId}')`, "primary")}</div></section>`;
@@ -705,7 +760,7 @@
       app.innerHTML = `
         <section class="card">
           <h2>${justFinished ? "半荘終了" : "半荘収支入力"}</h2>
-          <p>${esc(session.date)} / 開始 東:${esc(session.initialSeats.east)} 南:${esc(session.initialSeats.south)} 西:${esc(session.initialSeats.west)} 北:${esc(session.initialSeats.north)}</p>
+          <p>${esc(session.sessionLabel || session.date)} / 開始 東:${esc(session.initialSeats.east)} 南:${esc(session.initialSeats.south)} 西:${esc(session.initialSeats.west)} 北:${esc(session.initialSeats.north)}</p>
           <p class="muted">収支は1000点単位で入力します。</p>
           <div class="big-number ${tempK >= 0 ? "score-pos" : "score-neg"}">${tempK >= 0 ? "+" : ""}${tempK} <span class="muted">= ${tempK*1000}点</span></div>
           <div class="grid four">
@@ -722,7 +777,7 @@
 
   window.showSessionList = function() {
     const ss = sessions().slice().reverse();
-    app.innerHTML = `<section class="card"><h2>半荘一覧</h2>${ss.length ? `<table><thead><tr><th>日付</th><th>席順</th><th>収支</th><th>状態</th><th></th></tr></thead><tbody>${ss.map(s => `<tr><td>${esc(s.date)}</td><td>東:${esc(s.initialSeats.east)}<br>南:${esc(s.initialSeats.south)}<br>西:${esc(s.initialSeats.west)}<br>北:${esc(s.initialSeats.north)}</td><td>${s.masudaScoreK == null ? "未入力" : `${s.masudaScoreK >= 0 ? "+" : ""}${s.masudaScoreK}`}</td><td>${esc(s.status)}</td><td>${s.status === "in_progress" ? btn("開く", `showRound('${s.id}')`) : btn("収支", `showScoreInput('${s.id}')`)} ${btn("削除", `deleteSession('${s.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ半荘がありません。</p>`}</section>`;
+    app.innerHTML = `<section class="card"><h2>半荘一覧</h2>${ss.length ? `<table><thead><tr><th>半荘</th><th>席順</th><th>収支</th><th>状態</th><th></th></tr></thead><tbody>${ss.map(s => `<tr><td>${esc(s.sessionLabel || s.date)}</td><td>東:${esc(s.initialSeats.east)}<br>南:${esc(s.initialSeats.south)}<br>西:${esc(s.initialSeats.west)}<br>北:${esc(s.initialSeats.north)}</td><td>${s.masudaScoreK == null ? "未入力" : `${s.masudaScoreK >= 0 ? "+" : ""}${s.masudaScoreK}`}</td><td>${esc(s.status)}</td><td>${s.status === "in_progress" ? btn("開く", `showRound('${s.id}')`) : btn("収支", `showScoreInput('${s.id}')`)} ${btn("削除", `deleteSession('${s.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ半荘がありません。</p>`}</section>`;
   };
 
   window.deleteSession = function(sessionId) {
@@ -756,8 +811,8 @@
     downloadCsv(`sanma_round_logs_${today()}.csv`, [header, ...rows]);
   };
   window.exportSessionsCsv = function() {
-    const header = ["半荘ID","日付","開始東家","開始南家","開始西家","開始北家","益田収支_点","益田収支_千点","半荘メモ","状態","作成日時","更新日時"];
-    const rows = sessions().map(s => [s.id,s.date,s.initialSeats.east,s.initialSeats.south,s.initialSeats.west,s.initialSeats.north,s.masudaScorePoint ?? "",s.masudaScoreK ?? "",s.memo ?? "",s.status,s.createdAt,s.updatedAt]);
+    const header = ["半荘ID","日付","半荘No","半荘ラベル","開始東家","開始南家","開始西家","開始北家","益田収支_点","益田収支_千点","半荘メモ","状態","作成日時","更新日時"];
+    const rows = sessions().map(s => [s.id,s.date,s.sessionNo ?? "",s.sessionLabel ?? "",s.initialSeats.east,s.initialSeats.south,s.initialSeats.west,s.initialSeats.north,s.masudaScorePoint ?? "",s.masudaScoreK ?? "",s.memo ?? "",s.status,s.createdAt,s.updatedAt]);
     downloadCsv(`sanma_sessions_${today()}.csv`, [header, ...rows]);
   };
   window.showCsv = function() {

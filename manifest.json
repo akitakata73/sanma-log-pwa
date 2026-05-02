@@ -1,7 +1,7 @@
 {
   "name": "三麻ログPWA",
   "short_name": "三麻ログ",
-  "start_url": "./index.html?v=1.4.0",
+  "start_url": "./index.html?v=1.5.0",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#FDFF00",
