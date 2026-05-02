@@ -1,0 +1,10 @@
+{
+  "appVersion": "1.9.0",
+  "dataSchemaVersion": 5,
+  "updatedAt": "2026-05-02",
+  "notes": [
+    "アプリ本体更新画面を追加",
+    "保存データ形式補正とアプリ本体更新を分離",
+    "GitHub用READMEを追加"
+  ]
+}

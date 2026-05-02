@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=1.6.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=1.6.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=1.6.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=1.6.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=1.6.0" />
+  <link rel="manifest" href="./manifest.json?v=1.9.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=1.9.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=1.9.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=1.9.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=1.9.0" />
 
   <style>
     :root {
@@ -202,11 +202,20 @@
     .statusOk { padding: 10px 12px; border-radius: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; margin: 10px 0; }
     .buttonNote { color: var(--muted); font-size: 12px; margin-top: 6px; }
 
+
+    .updateBox { padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: #f9fafb; margin: 10px 0; }
+    .updateBox strong { display: inline-block; min-width: 110px; }
+
+
+    .resumeBlock { padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: #fff; margin: 10px 0; }
+    .resumeBlock ul { margin: 8px 0 0 20px; padding: 0; }
+    .resumeBlock li { margin: 5px 0; }
+
   </style>
 </head>
 <body>
   <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.6.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v1.9.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -214,12 +223,13 @@
     <button onclick="showHome()">ホーム</button>
     <button onclick="showCurrentOrNew()">進行中</button>
     <button onclick="showCsv()">CSV</button>
+    <button onclick="showAppUpdate()">更新</button>
     <button onclick="showSystem()">システム</button>
   </nav>
 
 <script>
 (() => {
-  const APP_VERSION = "1.6.0";
+  const APP_VERSION = "1.9.0";
   const DATA_SCHEMA_VERSION = 3;
   const KEY_SETTINGS = "sanma_log_pwa_settings";
   const KEY_BACKUP_PREFIX = "sanma_log_pwa_backup_before_migration_";
@@ -258,7 +268,7 @@
   }
   function schemaStatusHtml() {
     if (hasSchemaUpdateNeeded()) {
-      return `<div class="statusWarn"><strong>データ形式アップデート推奨</strong><br>システム画面から「データ形式を最新版へ更新」を一度実行してください。既存データは削除せず、実行前に自動バックアップを作成します。</div>`;
+      return `<div class="statusWarn"><strong>保存データ形式補正推奨</strong><br>システム画面から「保存データ形式を現在形式に補正」を一度実行してください。既存データは削除せず、実行前に自動バックアップを作成します。</div>`;
     }
     return `<div class="statusOk">データ形式：最新版です。</div>`;
   }
@@ -622,6 +632,7 @@
           ${btn("半荘一覧", "showSessionList()")}
           ${btn("局ログ一覧", "showLogList()")}
           ${btn("CSV出力", "showCsv()")}
+          ${btn("アプリ更新", "showAppUpdate()")}
           ${btn("システム", "showSystem()")}
         </div>
       </section>
@@ -1053,6 +1064,62 @@
   };
 
 
+
+  window.showAppUpdate = async function() {
+    let latest = null;
+    let checkedAt = nowText();
+    let errorText = "";
+    try {
+      const res = await fetch(`./version.json?ts=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`version.json を取得できませんでした: ${res.status}`);
+      latest = await res.json();
+    } catch (e) {
+      errorText = String(e.message || e);
+    }
+
+    const latestVersion = latest?.appVersion || "";
+    const needsUpdate = latestVersion && latestVersion !== APP_VERSION;
+
+    app.innerHTML = `
+      <section class="card">
+        <h2>アプリ更新</h2>
+        <p class="muted">GitHub Pages上にアップロード済みの最新版を、この端末で読み直すための画面です。</p>
+        <div class="updateBox">
+          <p><strong>現在の版：</strong><span class="mono">v${esc(APP_VERSION)}</span></p>
+          <p><strong>公開中の版：</strong>${latestVersion ? `<span class="mono">v${esc(latestVersion)}</span>` : `<span class="muted">確認できません</span>`}</p>
+          <p><strong>確認時刻：</strong>${esc(checkedAt)}</p>
+          ${errorText ? `<div class="statusWarn"><strong>確認失敗</strong><br>${esc(errorText)}<br>GitHub上に version.json があるか確認してください。</div>` : ""}
+          ${latestVersion ? (needsUpdate ? `<div class="statusWarn"><strong>更新があります。</strong><br>下のボタンでキャッシュ回避付きで再読み込みします。</div>` : `<div class="statusOk">この端末で表示中のアプリ本体は、公開中の版と一致しています。</div>`) : ""}
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>更新操作</h2>
+        <div class="grid two">
+          ${btn("最新版を読み直す", "forceAppReload()", "primary")}
+          ${btn("システムへ", "showSystem()")}
+        </div>
+        <p class="muted">この操作は、GitHubにファイルをアップロードする機能ではありません。GitHub上の index.html 等を更新済みの場合に、この端末で最新版を読み直します。</p>
+      </section>
+
+      <section class="card">
+        <h2>使い分け</h2>
+        <div class="resumeBlock">
+          <ul>
+            <li><strong>アプリ更新：</strong>GitHub Pages上の新しい index.html をこの端末で読み直す。</li>
+            <li><strong>保存データ形式補正：</strong>端末内のlocalStorageにある過去データの不足項目を補正する。</li>
+          </ul>
+        </div>
+      </section>
+    `;
+  };
+
+  window.forceAppReload = function() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("reload", Date.now().toString());
+    window.location.href = url.toString();
+  };
+
   window.showSystem = function() {
     const st = settings();
     const ss = sessions();
@@ -1076,14 +1143,14 @@
         ${schemaStatusHtml()}
       </section>
       <section class="card">
-        <h2>データ形式アップデート</h2>
-        <p class="muted">最新版に合わせて、保存済みの半荘データ・局ログの不足項目を補正します。保存キーは変更せず、既存データを消去しません。</p>
+        <h2>保存データ形式補正</h2>
+        <p class="muted">保存済みの半荘データ・局ログについて、不足項目を現在のデータ形式に合わせて補正します。アプリ本体を更新する機能ではありません。保存キーは変更せず、既存データを消去しません。</p>
         <div class="warnBox">
           <p><strong>実行前に自動バックアップを作成します。</strong></p>
           <p class="muted">過去データの削除や localStorage.clear() は行いません。</p>
         </div>
         <div class="grid two">
-          ${btn("データ形式を最新版へ更新", "runDataMigration()", "primary")}
+          ${btn("保存データ形式を現在形式に補正", "runDataMigration()", "primary")}
           ${btn("CSV出力へ", "showCsv()")}
         </div>
       </section>
@@ -1098,9 +1165,9 @@
   };
 
   window.runDataMigration = function() {
-    if (!confirm("保存済みデータを最新版の形式へ補正します。実行前に自動バックアップを作成します。よろしいですか？")) return;
+    if (!confirm("保存済みデータの形式だけを補正します。アプリ本体のバージョン更新ではありません。実行前に自動バックアップを作成します。よろしいですか？")) return;
     const result = migrateData({silent:false});
-    alert(`データ形式アップデート完了\n半荘：${result.sessionsBefore}件 → ${result.sessionsAfter}件\n局ログ：${result.logsBefore}件 → ${result.logsAfter}件`);
+    alert(`保存データ形式補正完了\n半荘：${result.sessionsBefore}件 → ${result.sessionsAfter}件\n局ログ：${result.logsBefore}件 → ${result.logsAfter}件`);
     showSystem();
   };
 
