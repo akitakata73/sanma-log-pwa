@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.6.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.6.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.6.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.6.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.6.0" />
+  <link rel="manifest" href="./manifest.json?v=2.6.2" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.6.2" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.6.2" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.6.2" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.6.2" />
 
   <style>
     :root {
@@ -395,7 +395,7 @@
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.6.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.6.2</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -409,7 +409,7 @@
 
 <script>
 (() => {
-  const APP_VERSION = "2.6.0";
+  const APP_VERSION = "2.6.2";
   const DATA_SCHEMA_VERSION = 6;
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
@@ -453,6 +453,13 @@
   }
   function makeSessionLabel(date, no) {
     return `${date} ${no}回目`;
+  }
+  function nextSessionNoForDate(date) {
+    const nums = sessions()
+      .filter(s => s.date === date)
+      .map(s => Number(s.sessionNo || 0))
+      .filter(n => Number.isFinite(n) && n > 0);
+    return nums.length ? Math.max(...nums) + 1 : 1;
   }
   function esc(s) {
     return String(s ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
@@ -761,7 +768,7 @@
 
   window.showCurrentOrNew = function() {
     const active = activeSession();
-    if (active) showRound(active.id); else showNewSession();
+    if (active) showRound(active.id); else window.showNewSession();
   };
 
   window.showNewSession = function() {
@@ -829,12 +836,12 @@
       updatedAt: nowText()
     };
     const all = sessions(); all.push(session); setSessions(all);
-    showRound(session.id);
+    window.showRound(session.id);
   };
 
   window.showRound = function(sessionId) {
     const session = sessions().find(s => s.id === sessionId);
-    if (!session) { showHome(); return; }
+    if (!session) { window.showHome(); return; }
     const r = currentRoles(session);
     const ps = participants(session);
     const masudaJoined = r.north !== "益田";
@@ -949,7 +956,7 @@
 
   function renderInputForm() {
     const session = sessions().find(s => s.id === inputDraft.sessionId);
-    if (!session) return showHome();
+    if (!session) return window.showHome();
     const result = inputDraft.resultType;
     const others = opponentOptions(session);
     const ps = participants(session);
@@ -999,7 +1006,7 @@
 
   window.saveInput = function() {
     const session = sessions().find(s => s.id === inputDraft.sessionId);
-    if (!session) return showHome();
+    if (!session) return window.showHome();
     const log = baseLog(session, inputDraft.resultType);
     log.opponent = inputDraft.opponent || "";
     log.stance = inputDraft.stance || "";
@@ -1021,7 +1028,7 @@
 
   window.saveSkip = function(sessionId, reason) {
     const session = sessions().find(s => s.id === sessionId);
-    if (!session) return showHome();
+    if (!session) return window.showHome();
     const log = baseLog(session, "スキップ");
     log.skipReason = reason;
     addLog(log);
@@ -1030,7 +1037,7 @@
 
   window.saveNoDamage = function(sessionId) {
     const session = sessions().find(s => s.id === sessionId);
-    if (!session) return showHome();
+    if (!session) return window.showHome();
     const log = baseLog(session, "被害なし");
     log.scoreDeltaPoint = 0;
     log.scoreDeltaK = 0;
@@ -1043,7 +1050,7 @@
 
   window.undoLastRound = function(sessionId) {
     const session = sessions().find(s => s.id === sessionId);
-    if (!session) return showHome();
+    if (!session) return window.showHome();
     if (session.status !== "in_progress") {
       alert("終了済みの半荘では、直前局へ戻る機能は使用できません。");
       return;
@@ -1084,7 +1091,7 @@
       allSessions[sidx].updatedAt = nowText();
       setSessions(allSessions);
     }
-    showRound(sessionId);
+    window.showRound(sessionId);
   };
 
   function renderNextStep(sessionId, message) {
@@ -1094,19 +1101,19 @@
 
   window.continueDealer = function(sessionId) {
     const session = sessions().find(s => s.id === sessionId);
-    if (!session) return showHome();
+    if (!session) return window.showHome();
     session.current.repeatCount += 1;
     updateSession(session);
-    showRound(sessionId);
+    window.showRound(sessionId);
   };
 
   window.rotateDealer = function(sessionId) {
     const session = sessions().find(s => s.id === sessionId);
-    if (!session) return showHome();
+    if (!session) return window.showHome();
     if (session.current.field === "南場" && session.current.roundNumber === 4) {
       session.status = "completed";
       updateSession(session);
-      showScoreInput(sessionId, true);
+      window.showScoreInput(sessionId, true);
       return;
     }
     session.current.dealerIndex = (session.current.dealerIndex + 1) % 4;
@@ -1118,7 +1125,7 @@
       session.current.roundNumber += 1;
     }
     updateSession(session);
-    showRound(sessionId);
+    window.showRound(sessionId);
   };
 
   window.finishSession = function(sessionId) {
@@ -1127,12 +1134,12 @@
     if (!session) return;
     session.status = "completed";
     updateSession(session);
-    showScoreInput(sessionId, true);
+    window.showScoreInput(sessionId, true);
   };
 
   window.showScoreInput = function(sessionId, justFinished=false) {
     const session = sessions().find(s => s.id === sessionId);
-    if (!session) return showHome();
+    if (!session) return window.showHome();
     let tempK = session.masudaScoreK ?? 0;
     window.adjustScore = function(delta) { tempK += delta; renderScoreInput(); };
     window.clearScore = function() { tempK = 0; renderScoreInput(); };
@@ -1293,7 +1300,7 @@
   };
 
 
-  showHome();
+  window.showHome();
 })();
 </script>
 </div>
