@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.7.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.7.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.7.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.7.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.7.0" />
+  <link rel="manifest" href="./manifest.json?v=2.8.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.8.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.8.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.8.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.8.0" />
 
   <style>
     :root {
@@ -414,12 +414,28 @@
       background: #fff !important;
     }
 
+
+    .kyotakuBox {
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fffbeb;
+      margin: 10px 0;
+    }
+    .kyotakuBox h3 { margin: 0 0 7px; font-size: 15px; }
+    .kyotakuGrid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 6px;
+    }
+
   </style>
 </head>
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.7.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.8.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -433,8 +449,8 @@
 
 <script>
 (() => {
-  const APP_VERSION = "2.7.0";
-  const DATA_SCHEMA_VERSION = 7;
+  const APP_VERSION = "2.8.0";
+  const DATA_SCHEMA_VERSION = 8;
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
   const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
@@ -536,11 +552,12 @@
   function currentInputDelta(session) {
     const result = inputDraft.resultType;
     const riichi = riichiStickDelta();
+    const kyotaku = (result === "ロン和了" || result === "ツモ和了") ? kyotakuPoint() : 0;
     if (result === "流局") return calcDrawDelta(inputDraft.tenpaiPlayers || [], participants(session)) + riichi;
     if (result === "被害なし") return riichi;
-    if (!inputDraft.point) return riichi;
+    if (!inputDraft.point) return riichi + kyotaku;
     const sign = (result === "ロン放銃" || result === "ツモられ") ? -1 : 1;
-    return sign * Number(inputDraft.point || 0) + riichi;
+    return sign * Number(inputDraft.point || 0) + kyotaku + riichi;
   }
   function renderRiichiToggle() {
     return `<div class="riichiBox">
@@ -549,6 +566,23 @@
       <div class="riichiToggle">
         ${btn("出していない", "setRiichiStick(false)", inputDraft.riichiStick ? "riichiOff" : "selected")}
         ${btn("出した（-1000点）", "setRiichiStick(true)", inputDraft.riichiStick ? "riichiOn" : "")}
+      </div>
+    </div>`;
+  }
+  function kyotakuPoint() {
+    return Number(inputDraft.kyotakuSticks || 0) * 1000;
+  }
+  function renderKyotakuInput(result) {
+    const canWin = result === "ロン和了" || result === "ツモ和了";
+    if (!canWin) return "";
+    const n = Number(inputDraft.kyotakuSticks || 0);
+    const buttons = [0,1,2,3,4].map(v => btn(`${v}本`, `setKyotakuSticks(${v})`, n === v ? "selected" : "")).join("");
+    return `<div class="kyotakuBox">
+      <h3>供託獲得</h3>
+      <p class="muted">益田が和了時に獲得した供託リーチ棒の本数です。1本あたり+1000点として今回変動に反映します。</p>
+      <div class="kyotakuGrid">
+        ${buttons}
+        ${btn("手入力", "setKyotakuSticksCustom()", "soft")}
       </div>
     </div>`;
   }
@@ -573,7 +607,7 @@
           <div class="scoreValue">${hasDelta ? formatScore(after) : "未確定"}</div>
         </div>
       </div>
-      <div class="scoreNote">半荘開始時を100,000点として、有効局ログのみから計算します。取消済みログ、スキップ、被害なしは点数変動に含めません。</div>
+      <div class="scoreNote">半荘開始時を100,000点として、有効局ログのみから計算します。取消済みログとスキップは点数変動に含めません。被害なしは原則0点ですが、リーチ棒を出した場合は-1000点を反映します。</div>
     </div>`;
   }
   function summarizeLog(l) {
@@ -581,6 +615,7 @@
     const detail = [
       l.opponent ? esc(l.opponent) : "",
       Number(l.scoreDeltaPoint || 0) !== 0 ? formatDelta(l.scoreDeltaPoint) : "0点",
+      Number(l.kyotakuPoint || 0) ? `供託：+${Number(l.kyotakuPoint || 0)}点` : "",
       Number(l.riichiStickPoint || 0) ? `リーチ棒：-${Number(l.riichiStickPoint || 0)}点` : "",
       l.stance ? `姿勢：${esc(l.stance)}` : "",
       (l.subjectiveTags && l.subjectiveTags.length) ? `タグ：${esc(l.subjectiveTags.join("・"))}` : (l.subjectiveTag ? `タグ：${esc(l.subjectiveTag)}` : ""),
@@ -708,6 +743,8 @@
       scoreDeltaK: 0,
       riichiStickPoint: 0,
       riichiStick: false,
+      kyotakuSticks: 0,
+      kyotakuPoint: 0,
       baseScoreDeltaPoint: 0,
       masudaDealer: r.east === "益田",
       opponentDealer: false,
@@ -948,7 +985,7 @@
   }
 
   window.startInput = function(sessionId, resultType) {
-    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, riichiStick: false, stance: "", tags: [], tenpaiPlayers: [] };
+    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, riichiStick: false, kyotakuSticks: 0, stance: "", tags: [], tenpaiPlayers: [] };
     renderInputForm();
   };
   window.selectOpponent = function(name) {
@@ -962,6 +999,22 @@
   };
   window.setRiichiStick = function(value) {
     inputDraft.riichiStick = Boolean(value);
+    renderInputForm();
+  };
+  window.setKyotakuSticks = function(count) {
+    const n = Number(count || 0);
+    inputDraft.kyotakuSticks = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+    renderInputForm();
+  };
+  window.setKyotakuSticksCustom = function() {
+    const raw = prompt("供託獲得本数を入力してください。例：5");
+    if (raw == null) return;
+    const n = Number(String(raw).replace(/[^0-9]/g, ""));
+    if (!Number.isFinite(n) || n < 0) {
+      alert("0以上の整数で入力してください。");
+      return;
+    }
+    inputDraft.kyotakuSticks = Math.floor(n);
     renderInputForm();
   };
   window.selectPoint = function(point) {
@@ -1031,6 +1084,7 @@
         ${summarizeLog(lastActiveLog(session.id))}
         ${renderTableView(session, true)}
         ${renderRiichiToggle()}
+        ${renderKyotakuInput(result)}
         ${result === "ツモ和了" ? `<p>支払い者：${others.map(o => `<span class="pill">${esc(o)}</span>`).join(" ")}</p>` : ""}
         ${needsOpponent ? `<h3>${opponentLabel}</h3>${renderChoiceButtons(others, "selectOpponent", inputDraft.opponent)}` : ""}
         ${isNoDamage ? `<p class="muted">被害なしは点数入力なしで保存します。リーチ棒を出した場合のみ-1000点を反映します。</p>` : (isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point", session)}`)}
@@ -1073,6 +1127,8 @@
     log.tenpaiPlayers = inputDraft.tenpaiPlayers || [];
     log.riichiStick = Boolean(inputDraft.riichiStick);
     log.riichiStickPoint = log.riichiStick ? 1000 : 0;
+    log.kyotakuSticks = (inputDraft.resultType === "ロン和了" || inputDraft.resultType === "ツモ和了") ? Number(inputDraft.kyotakuSticks || 0) : 0;
+    log.kyotakuPoint = log.kyotakuSticks * 1000;
     if (inputDraft.resultType === "流局") {
       log.baseScoreDeltaPoint = calcDrawDelta(log.tenpaiPlayers, participants(session));
     } else if (inputDraft.resultType === "被害なし") {
@@ -1081,7 +1137,7 @@
       const sign = (inputDraft.resultType === "ロン放銃" || inputDraft.resultType === "ツモられ") ? -1 : 1;
       log.baseScoreDeltaPoint = sign * Number(inputDraft.point || 0);
     }
-    log.scoreDeltaPoint = log.baseScoreDeltaPoint - log.riichiStickPoint;
+    log.scoreDeltaPoint = log.baseScoreDeltaPoint + log.kyotakuPoint - log.riichiStickPoint;
     log.scoreDeltaK = log.scoreDeltaPoint / 1000;
     log.masudaDealer = isMasudaDealer(session);
     log.opponentDealer = log.opponent ? currentRoles(session).east === log.opponent : false;
@@ -1105,6 +1161,8 @@
     log.baseScoreDeltaPoint = 0;
     log.riichiStick = false;
     log.riichiStickPoint = 0;
+    log.kyotakuSticks = 0;
+    log.kyotakuPoint = 0;
     log.scoreDeltaPoint = 0;
     log.scoreDeltaK = 0;
     log.stance = "";
@@ -1271,8 +1329,8 @@
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
   window.exportLogsCsv = function() {
-    const header = ["半荘ID","局ID","日付","局表示","場","局番号","連荘数","親","北家","参加者","益田参加","スキップ理由","結果","相手","点数移動_点","点数移動_千点","益田親","相手親","対局姿勢","主観タグ","テンパイ者","作成日時"];
-    const rows = logs().filter(l => l.isCanceled !== true).map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,l.dealer,l.northPlayer,l.participants,l.masudaJoined,l.skipReason,l.resultType,l.opponent,l.scoreDeltaPoint,l.scoreDeltaK,l.masudaDealer,l.opponentDealer,l.stance,((l.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags.join("・") : (l.subjectiveTag || "")),l.tenpaiPlayers,l.createdAt]);
+    const header = ["半荘ID","局ID","日付","局表示","場","局番号","連荘数","親","北家","参加者","益田参加","スキップ理由","結果","相手","点数移動_点","点数移動_千点","基礎点数移動_点","供託獲得本数","供託獲得点","リーチ棒_点","リーチ棒あり","益田親","相手親","対局姿勢","主観タグ","テンパイ者","作成日時"];
+    const rows = logs().filter(l => l.isCanceled !== true).map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,l.dealer,l.northPlayer,l.participants,l.masudaJoined,l.skipReason,l.resultType,l.opponent,l.scoreDeltaPoint,l.scoreDeltaK,(l.baseScoreDeltaPoint ?? (Number(l.scoreDeltaPoint || 0) + Number(l.riichiStickPoint || 0) - Number(l.kyotakuPoint || 0))),Number(l.kyotakuSticks || 0),Number(l.kyotakuPoint || 0),Number(l.riichiStickPoint || 0),Boolean(l.riichiStick || Number(l.riichiStickPoint || 0)),l.masudaDealer,l.opponentDealer,l.stance,((l.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags.join("・") : (l.subjectiveTag || "")),l.tenpaiPlayers,l.createdAt]);
     downloadCsv(`sanma_round_logs_${today()}.csv`, [header, ...rows]);
   };
   window.exportSessionsCsv = function() {
