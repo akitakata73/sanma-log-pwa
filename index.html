@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.8.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.8.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.8.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.8.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.8.0" />
+  <link rel="manifest" href="./manifest.json?v=2.9.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.9.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.9.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.9.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.9.0" />
 
   <style>
     :root {
@@ -435,8 +435,8 @@
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.8.0</span></h1>
-    <div class="sub">四人一抜け三麻・益田視点ログ</div>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.9.0</span></h1>
+    <div class="sub">四人一抜け三麻・${esc(displayName(SELF_MEMBER))}視点ログ</div>
   </header>
   <main id="app"></main>
   <nav class="footerNav">
@@ -449,9 +449,11 @@
 
 <script>
 (() => {
-  const APP_VERSION = "2.8.0";
-  const DATA_SCHEMA_VERSION = 8;
-  const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
+  const APP_VERSION = "2.9.0";
+  const DATA_SCHEMA_VERSION = 9;
+  const SELF_MEMBER = "自分";
+  const MEMBERS = ["自分", "A", "B", "C"];
+  const KEY_MEMBER_NAMES = "sanma_log_pwa_member_names";
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
   const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
   const TAGS = {
@@ -477,6 +479,17 @@
   function logs() { return load(KEY_LOGS, []); }
   function setSessions(v) { save(KEY_SESSIONS, v); }
   function setLogs(v) { save(KEY_LOGS, v); }
+  function memberNameSettings() {
+    return load(KEY_MEMBER_NAMES, { "自分": "自分", "A": "A", "B": "B", "C": "C" });
+  }
+  function setMemberNameSettings(v) { save(KEY_MEMBER_NAMES, v); }
+  function displayName(name) {
+    const m = memberNameSettings();
+    return m[name] || name || "";
+  }
+  function displayNameList(list) {
+    return (list || []).map(x => displayName(x)).join("・");
+  }
 
   function id(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
   function today() {
@@ -562,7 +575,7 @@
   function renderRiichiToggle() {
     return `<div class="riichiBox">
       <h3>リーチ棒</h3>
-      <p class="muted">益田がこの局でリーチ棒を出した場合は「出した」を選択します。未入力・既存ログは0点扱いです。</p>
+      <p class="muted">${esc(displayName(SELF_MEMBER))}がこの局でリーチ棒を出した場合は「出した」を選択します。未入力・既存ログは0点扱いです。</p>
       <div class="riichiToggle">
         ${btn("出していない", "setRiichiStick(false)", inputDraft.riichiStick ? "riichiOff" : "selected")}
         ${btn("出した（-1000点）", "setRiichiStick(true)", inputDraft.riichiStick ? "riichiOn" : "")}
@@ -579,7 +592,7 @@
     const buttons = [0,1,2,3,4].map(v => btn(`${v}本`, `setKyotakuSticks(${v})`, n === v ? "selected" : "")).join("");
     return `<div class="kyotakuBox">
       <h3>供託獲得</h3>
-      <p class="muted">益田が和了時に獲得した供託リーチ棒の本数です。1本あたり+1000点として今回変動に反映します。</p>
+      <p class="muted">${esc(displayName(SELF_MEMBER))}が和了時に獲得した供託リーチ棒の本数です。1本あたり+1000点として今回変動に反映します。</p>
       <div class="kyotakuGrid">
         ${buttons}
         ${btn("手入力", "setKyotakuSticksCustom()", "soft")}
@@ -592,7 +605,7 @@
     const d = hasDelta ? Number(delta || 0) : 0;
     const after = current + d;
     return `<div class="scoreCard">
-      <h3>益田の点数確認</h3>
+      <h3>${esc(displayName(SELF_MEMBER))}の点数確認</h3>
       <div class="scoreGrid">
         <div class="scoreBox">
           <div class="scoreLabel">記録上の現在点</div>
@@ -619,7 +632,7 @@
       Number(l.riichiStickPoint || 0) ? `リーチ棒：-${Number(l.riichiStickPoint || 0)}点` : "",
       l.stance ? `姿勢：${esc(l.stance)}` : "",
       (l.subjectiveTags && l.subjectiveTags.length) ? `タグ：${esc(l.subjectiveTags.join("・"))}` : (l.subjectiveTag ? `タグ：${esc(l.subjectiveTag)}` : ""),
-      l.tenpaiPlayers && l.tenpaiPlayers.length ? `テンパイ：${esc(l.tenpaiPlayers.join("・"))}` : ""
+      l.tenpaiPlayers && l.tenpaiPlayers.length ? `テンパイ：${esc(displayNameList(l.tenpaiPlayers))}` : ""
     ].filter(Boolean).join(" / ");
     return `<div class="previousLog">
       <div class="title">前回結果</div>
@@ -631,7 +644,7 @@
     const r = currentRoles(session);
     return `<div class="currentStatus">
       <div class="big">現在入力中：${esc(roundLabel(session))}</div>
-      <div class="small">親：${esc(r.east)}　北家：${esc(r.north)}（抜け番）　益田：${esc(masudaRole(session))}</div>
+      <div class="small">親：${esc(displayName(r.east))}　北家：${esc(displayName(r.north))}（抜け番）　自分：${esc(masudaRole(session))}</div>
     </div>`;
   }
   function currentRoles(session) {
@@ -655,10 +668,10 @@
   }
   function masudaRole(session) {
     const r = currentRoles(session);
-    if (r.east === "益田") return "東家（親）";
-    if (r.south === "益田") return "南家";
-    if (r.west === "益田") return "西家";
-    if (r.north === "益田") return "北家（抜け番）";
+    if (r.east === "自分") return "東家（親）";
+    if (r.south === "自分") return "南家";
+    if (r.west === "自分") return "西家";
+    if (r.north === "自分") return "北家（抜け番）";
     return "";
   }
   function roleLabel(roleKey) {
@@ -679,15 +692,15 @@
   function renderSeatBox(posClass, item) {
     const isDealer = item.role === "east";
     const isNorth = item.role === "north";
-    const isMasuda = item.name === "益田";
+    const isMasuda = item.name === "自分";
     const cls = ["seatBox", posClass, isDealer ? "seatDealer" : "", isNorth ? "seatNorth" : "", isMasuda ? "seatMasuda" : ""].join(" ");
     const tags = [
-      isMasuda ? `<span class="seatTag tagMasuda">益田</span>` : "",
+      isMasuda ? `<span class="seatTag tagMasuda">自分</span>` : "",
       isDealer ? `<span class="seatTag tagDealer">親</span>` : "",
       isNorth ? `<span class="seatTag tagNorth">抜け番</span>` : ""
     ].filter(Boolean).join("");
     return `<div class="${cls}">
-      <div class="seatName">${esc(item.name || "-")}</div>
+      <div class="seatName">${esc(displayName(item.name) || "-")}</div>
       <div class="seatRole">${esc(roleLabel(item.role))}</div>
       <div class="seatTags">${tags}</div>
     </div>`;
@@ -695,19 +708,19 @@
   function renderTableView(session, compact=false) {
     const items = playerRoleMap(session);
     const order = ["east", "south", "west", "north"];
-    const masudaItem = items.find(x => x.name === "益田") || items[0];
+    const masudaItem = items.find(x => x.name === "自分") || items[0];
     const idx = order.indexOf(masudaItem.role);
     const byRole = Object.fromEntries(items.map(x => [x.role, x]));
 
-    // 益田を常に下に固定。右＝次家、上＝対面、左＝上家の位置で表示。
+    // 自分を常に下に固定。右＝次家、上＝対面、左＝上家の位置で表示。
     const bottom = byRole[order[idx]];
     const right = byRole[order[(idx + 1) % 4]];
     const top = byRole[order[(idx + 2) % 4]];
     const left = byRole[order[(idx + 3) % 4]];
 
     const sectionClass = compact ? "card compactTableCard" : "card";
-    const title = compact ? "卓図" : "卓図（益田視点）";
-    const note = compact ? "" : `<p class="muted">益田を常に下側に固定して表示します。実際の東南西北は各名前の下に表示します。</p>`;
+    const title = compact ? "卓図" : "卓図（${esc(displayName(SELF_MEMBER))}視点）";
+    const note = compact ? "" : `<p class="muted">自分を常に下側に固定して表示します。実際の東南西北は各名前の下に表示します。</p>`;
     return `<section class="${sectionClass}">
       <h2>${title}</h2>
       ${note}
@@ -720,8 +733,8 @@
       </div>
     </section>`;
   }
-  function isMasudaDealer(session) { return currentRoles(session).east === "益田"; }
-  function opponentOptions(session) { return participants(session).filter(p => p !== "益田"); }
+  function isMasudaDealer(session) { return currentRoles(session).east === "自分"; }
+  function opponentOptions(session) { return participants(session).filter(p => p !== "自分"); }
   function baseLog(session, resultType) {
     const r = currentRoles(session);
     return {
@@ -735,7 +748,7 @@
       dealer: r.east,
       northPlayer: r.north,
       participants: participants(session),
-      masudaJoined: r.north !== "益田",
+      masudaJoined: r.north !== "自分",
       skipReason: "",
       resultType,
       opponent: "",
@@ -746,7 +759,7 @@
       kyotakuSticks: 0,
       kyotakuPoint: 0,
       baseScoreDeltaPoint: 0,
-      masudaDealer: r.east === "益田",
+      masudaDealer: r.east === "自分",
       opponentDealer: false,
       stance: "",
       subjectiveTag: "",
@@ -780,7 +793,7 @@
   function allowedPointsForCurrentInput(session) {
     const result = inputDraft.resultType;
     const r = currentRoles(session);
-    const masudaDealer = r.east === "益田";
+    const masudaDealer = r.east === "自分";
 
     if (result === "ロン和了" || result === "ツモ和了") {
       return pointSet(masudaDealer ? "parentWin" : "childWin");
@@ -836,7 +849,7 @@
     app.innerHTML = `
       <section class="card">
         <h2>ホーム</h2>
-        <p class="muted">局ごとに、益田視点の結果・点数移動・対局姿勢を記録します。</p>
+        <p class="muted">局ごとに、${esc(displayName(SELF_MEMBER))}視点の結果・点数移動・対局姿勢を記録します。</p>
         <div class="grid two">
           ${btn("新しい半荘", "window.showNewSession()", "primary")}
           ${btn(active ? "進行中の半荘" : "進行中なし", "showCurrentOrNew()", active ? "accent" : "soft")}
@@ -882,7 +895,7 @@
   };
 
   function renderSeatButtons(pos, used) {
-    return `<div class="grid four">${MEMBERS.filter(m => !used.includes(m) || seatDraft[pos] === m).map(m => btn(m, `setSeat('${pos}','${m}')`, seatDraft[pos] === m ? "selected" : "")).join("")}</div>`;
+    return `<div class="grid four">${MEMBERS.filter(m => !used.includes(m) || seatDraft[pos] === m).map(m => btn(displayName(m), `setSeat('${pos}','${m}')`, seatDraft[pos] === m ? "selected" : "")).join("")}</div>`;
   }
   function renderSeatSetup() {
     const usedEast = [];
@@ -895,7 +908,7 @@
         <h3>東家を選択</h3>${renderSeatButtons("east", usedEast)}
         <h3>南家を選択</h3>${seatDraft.east ? renderSeatButtons("south", usedSouth) : `<p class="muted">先に東家を選択してください。</p>`}
         <h3>西家を選択</h3>${seatDraft.south ? renderSeatButtons("west", usedWest) : `<p class="muted">先に南家を選択してください。</p>`}
-        <h3>北家</h3><p>${seatDraft.north ? `<span class="pill yellow">${esc(seatDraft.north)}</span>` : `<span class="muted">東・南・西を選ぶと自動表示されます。</span>`}</p>
+        <h3>北家</h3><p>${seatDraft.north ? `<span class="pill yellow">${esc(displayName(seatDraft.north))}</span>` : `<span class="muted">東・南・西を選ぶと自動表示されます。</span>`}</p>
         <div class="row">${btn("半荘開始", "startSession()", ready ? "primary" : "",)} ${btn("ホーム", "window.showHome()")}</div>
       </section>`;
     if (!ready) {
@@ -933,12 +946,12 @@
     if (!session) { window.showHome(); return; }
     const r = currentRoles(session);
     const ps = participants(session);
-    const masudaJoined = r.north !== "益田";
+    const masudaJoined = r.north !== "自分";
     app.innerHTML = `
       <section class="card">
         ${renderCurrentStatus(session)}
         <p class="muted">${esc(session.sessionLabel || session.date)}</p>
-        <p>参加者：${ps.map(p => `<span class="pill yellow">${esc(p)}</span>`).join(" ")}</p>
+        <p>参加者：${ps.map(p => `<span class="pill yellow">${esc(displayName(p))}</span>`).join(" ")}</p>
         ${renderScoreCard(session)}
         ${summarizeLog(lastActiveLog(session.id))}
         <div class="grid two">
@@ -960,10 +973,10 @@
 
   function renderMasudaAbsent(session) {
     return `<section class="card">
-      <h2>益田抜け番</h2>
-      <p class="muted">この局は益田が北家です。通常はスキップで進めます。</p>
+      <h2>自分抜け番</h2>
+      <p class="muted">この局は${esc(displayName(SELF_MEMBER))}が北家です。通常はスキップで進めます。</p>
       <div class="grid two">
-        ${btn("益田抜け番でスキップ", `saveSkip('${session.id}','益田抜け番')`, "primary")}
+        ${btn("自分抜け番でスキップ", `saveSkip('${session.id}','自分抜け番')`, "primary")}
         ${btn("状況だけ記録（入力困難）", `saveSkip('${session.id}','入力困難')`)}
       </div>
     </section>`;
@@ -1075,7 +1088,7 @@
     const deltaPreview = (isDraw || isNoDamage || inputDraft.point || inputDraft.riichiStick) ? currentInputDelta(session) : null;
     const scorePreview = renderScoreCard(session, deltaPreview);
     const opponentLabel = result === "ロン和了" ? "誰から？" : result === "ロン放銃" ? "誰へ？" : result === "ツモられ" ? "誰にツモられ？" : "";
-    const pointLabel = result === "ツモ和了" ? "益田の総収入" : result === "ツモられ" ? "益田の支払い" : result === "ロン放銃" ? "失点" : "打点";
+    const pointLabel = result === "ツモ和了" ? "自分の総収入" : result === "ツモられ" ? "自分の支払い" : result === "ロン放銃" ? "失点" : "打点";
     const ready = isNoDamage ? true : (isDraw ? !!inputDraft.stance : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)) && inputDraft.stance));
     app.innerHTML = `
       <section class="card">
@@ -1110,7 +1123,7 @@
     const t = tenpaiPlayers || [];
     const n = t.length;
     if (n === 0 || n === ps.length) return 0;
-    const masudaT = t.includes("益田");
+    const masudaT = t.includes("自分");
     if (n === 1) return masudaT ? 2000 : -1000;
     if (n === 2) return masudaT ? 1000 : -2000;
     return 0;
@@ -1329,12 +1342,12 @@
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
   window.exportLogsCsv = function() {
-    const header = ["半荘ID","局ID","日付","局表示","場","局番号","連荘数","親","北家","参加者","益田参加","スキップ理由","結果","相手","点数移動_点","点数移動_千点","基礎点数移動_点","供託獲得本数","供託獲得点","リーチ棒_点","リーチ棒あり","益田親","相手親","対局姿勢","主観タグ","テンパイ者","作成日時"];
-    const rows = logs().filter(l => l.isCanceled !== true).map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,l.dealer,l.northPlayer,l.participants,l.masudaJoined,l.skipReason,l.resultType,l.opponent,l.scoreDeltaPoint,l.scoreDeltaK,(l.baseScoreDeltaPoint ?? (Number(l.scoreDeltaPoint || 0) + Number(l.riichiStickPoint || 0) - Number(l.kyotakuPoint || 0))),Number(l.kyotakuSticks || 0),Number(l.kyotakuPoint || 0),Number(l.riichiStickPoint || 0),Boolean(l.riichiStick || Number(l.riichiStickPoint || 0)),l.masudaDealer,l.opponentDealer,l.stance,((l.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags.join("・") : (l.subjectiveTag || "")),l.tenpaiPlayers,l.createdAt]);
+    const header = ["半荘ID","局ID","日付","局表示","場","局番号","連荘数","親","北家","参加者","自分参加","スキップ理由","結果","相手","点数移動_点","点数移動_千点","基礎点数移動_点","供託獲得本数","供託獲得点","リーチ棒_点","リーチ棒あり","自分親","相手親","対局姿勢","主観タグ","テンパイ者","作成日時"];
+    const rows = logs().filter(l => l.isCanceled !== true).map(l => [l.sessionId,l.id,l.date,l.roundLabel,l.field,l.roundNumber,l.repeatCount,displayName(l.dealer),displayName(l.northPlayer),displayNameList(l.participants),l.masudaJoined,l.skipReason,l.resultType,displayName(l.opponent),l.scoreDeltaPoint,l.scoreDeltaK,(l.baseScoreDeltaPoint ?? (Number(l.scoreDeltaPoint || 0) + Number(l.riichiStickPoint || 0) - Number(l.kyotakuPoint || 0))),Number(l.kyotakuSticks || 0),Number(l.kyotakuPoint || 0),Number(l.riichiStickPoint || 0),Boolean(l.riichiStick || Number(l.riichiStickPoint || 0)),l.masudaDealer,l.opponentDealer,l.stance,((l.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags.join("・") : (l.subjectiveTag || "")),displayNameList(l.tenpaiPlayers),l.createdAt]);
     downloadCsv(`sanma_round_logs_${today()}.csv`, [header, ...rows]);
   };
   window.exportSessionsCsv = function() {
-    const header = ["半荘ID","日付","半荘No","半荘ラベル","開始東家","開始南家","開始西家","開始北家","益田収支_点","益田収支_千点","半荘メモ","状態","作成日時","更新日時"];
+    const header = ["半荘ID","日付","半荘No","半荘ラベル","開始東家","開始南家","開始西家","開始北家","自分収支_点","自分収支_千点","半荘メモ","状態","作成日時","更新日時"];
     const rows = sessions().map(s => [s.id,s.date,s.sessionNo ?? "",s.sessionLabel ?? "",s.initialSeats.east,s.initialSeats.south,s.initialSeats.west,s.initialSeats.north,s.masudaScorePoint ?? "",s.masudaScoreK ?? "",s.memo ?? "",s.status,s.createdAt,s.updatedAt]);
     downloadCsv(`sanma_sessions_${today()}.csv`, [header, ...rows]);
   };
@@ -1399,6 +1412,36 @@
     window.location.href = url.toString();
   };
 
+
+  window.showNameSettings = function() {
+    const names = memberNameSettings();
+    app.innerHTML = `
+      <section class="card">
+        <h2>表示名設定</h2>
+        <p class="muted">公開コード上は「自分 / A / B / C」の仮名で管理し、この端末だけに表示名を保存します。GitHubにはここで入力した表示名は送信されません。</p>
+        <label>自分<input id="name_self" value="${esc(names["自分"] || "自分")}"></label>
+        <label>A<input id="name_a" value="${esc(names["A"] || "A")}"></label>
+        <label>B<input id="name_b" value="${esc(names["B"] || "B")}"></label>
+        <label>C<input id="name_c" value="${esc(names["C"] || "C")}"></label>
+        <div class="grid two" style="margin-top:12px;">
+          ${btn("保存", "saveNameSettings()", "primary")}
+          ${btn("システムへ", "showSystem()")}
+        </div>
+      </section>
+    `;
+  };
+  window.saveNameSettings = function() {
+    const get = id => (document.getElementById(id)?.value || "").trim();
+    setMemberNameSettings({
+      "自分": get("name_self") || "自分",
+      "A": get("name_a") || "A",
+      "B": get("name_b") || "B",
+      "C": get("name_c") || "C"
+    });
+    alert("表示名を保存しました。");
+    window.showSystem();
+  };
+
   window.showSystem = function() {
     const ss = sessions();
     const ls = logs();
@@ -1413,6 +1456,12 @@
         <div class="notice">
           実データ未入力の段階で旧データ補正機能を整理した版です。今後は、アプリ本体の更新は「更新」画面、記録データの確認はCSV出力で行います。
         </div>
+      </section>
+      <section class="card">
+        <h2>表示名</h2>
+        <p class="muted">公開コード上は仮名のまま、使用端末だけで表示名を変更します。</p>
+        <p>自分：${esc(displayName("自分"))}　A：${esc(displayName("A"))}　B：${esc(displayName("B"))}　C：${esc(displayName("C"))}</p>
+        <div class="grid two">${btn("表示名を設定", "showNameSettings()", "primary")}</div>
       </section>
       <section class="card">
         <h2>現在の保存キー</h2>
