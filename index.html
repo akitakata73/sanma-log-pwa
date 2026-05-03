@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.6.2" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.6.2" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.6.2" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.6.2" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.6.2" />
+  <link rel="manifest" href="./manifest.json?v=2.6.3" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.6.3" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.6.3" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.6.3" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.6.3" />
 
   <style>
     :root {
@@ -395,21 +395,21 @@
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.6.2</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.6.3</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
   <nav class="footerNav">
-    <button onclick="showHome()"><span style="font-size:20px">🏠</span><span>ホーム</span></button>
+    <button onclick="window.showHome()"><span style="font-size:20px">🏠</span><span>ホーム</span></button>
     <button onclick="showCurrentOrNew()"><span style="font-size:20px">🀄</span><span>進行中</span></button>
     <button onclick="showCsv()"><span style="font-size:20px">📄</span><span>CSV</span></button>
     <button onclick="showAppUpdate()"><span style="font-size:20px">↻</span><span>更新</span></button>
-    <button onclick="showSystem()"><span style="font-size:20px">⚙️</span><span>設定</span></button>
+    <button onclick="window.showSystem()"><span style="font-size:20px">⚙️</span><span>設定</span></button>
   </nav>
 
 <script>
 (() => {
-  const APP_VERSION = "2.6.2";
+  const APP_VERSION = "2.6.3";
   const DATA_SCHEMA_VERSION = 6;
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
@@ -672,6 +672,15 @@
       subjectiveTag: "",
       subjectiveTags: [],
       tenpaiPlayers: [],
+      currentSnapshot: {
+        field: session.current.field,
+        roundNumber: session.current.roundNumber,
+        repeatCount: session.current.repeatCount,
+        dealerIndex: session.current.dealerIndex
+      },
+      isCanceled: false,
+      canceledAt: "",
+      cancelReason: "",
       createdAt: nowText()
     };
   }
@@ -749,13 +758,13 @@
         <h2>ホーム</h2>
         <p class="muted">局ごとに、益田視点の結果・点数移動・対局姿勢を記録します。</p>
         <div class="grid two">
-          ${btn("新しい半荘", "showNewSession()", "primary")}
+          ${btn("新しい半荘", "window.showNewSession()", "primary")}
           ${btn(active ? "進行中の半荘" : "進行中なし", "showCurrentOrNew()", active ? "accent" : "soft")}
-          ${btn("半荘一覧", "showSessionList()")}
-          ${btn("局ログ一覧", "showLogList()")}
+          ${btn("半荘一覧", "window.showSessionList()")}
+          ${btn("局ログ一覧", "window.showLogList()")}
           ${btn("CSV出力", "showCsv()")}
           ${btn("アプリ更新", "showAppUpdate()")}
-          ${btn("システム", "showSystem()")}
+          ${btn("システム", "window.showSystem()")}
         </div>
       </section>
       <section class="card">
@@ -768,7 +777,7 @@
 
   window.showCurrentOrNew = function() {
     const active = activeSession();
-    if (active) showRound(active.id); else window.showNewSession();
+    if (active) window.showRound(active.id); else window.showNewSession();
   };
 
   window.showNewSession = function() {
@@ -807,7 +816,7 @@
         <h3>南家を選択</h3>${seatDraft.east ? renderSeatButtons("south", usedSouth) : `<p class="muted">先に東家を選択してください。</p>`}
         <h3>西家を選択</h3>${seatDraft.south ? renderSeatButtons("west", usedWest) : `<p class="muted">先に南家を選択してください。</p>`}
         <h3>北家</h3><p>${seatDraft.north ? `<span class="pill yellow">${esc(seatDraft.north)}</span>` : `<span class="muted">東・南・西を選ぶと自動表示されます。</span>`}</p>
-        <div class="row">${btn("半荘開始", "startSession()", ready ? "primary" : "",)} ${btn("ホーム", "showHome()")}</div>
+        <div class="row">${btn("半荘開始", "startSession()", ready ? "primary" : "",)} ${btn("ホーム", "window.showHome()")}</div>
       </section>`;
     if (!ready) {
       const buttons = app.querySelectorAll("button");
@@ -862,7 +871,7 @@
       <section class="card">
         <h2>半荘操作</h2>
         <div class="grid two">
-          ${btn("半荘収支入力", `showScoreInput('${session.id}')`)}
+          ${btn("半荘収支入力", `window.showScoreInput('${session.id}')`)}
           ${btn("半荘を終了", `finishSession('${session.id}')`, "danger")}
         </div>
       </section>
@@ -981,7 +990,7 @@
         <h3>主観タグ（複数選択可）</h3>${renderSubjectiveTagButtons(tagListFor(result))}
         <div class="row" style="margin-top:14px;">
           ${btn("保存", `saveInput()`, ready ? "primary" : "")}
-          ${btn("戻る", `showRound('${session.id}')`)}
+          ${btn("戻る", `window.showRound('${session.id}')`)}
         </div>
       </section>`;
     if (!ready) {
@@ -1153,7 +1162,7 @@
         all[idx].updatedAt = nowText();
         setSessions(all);
       }
-      showSessionList();
+      window.showSessionList();
     };
     function renderScoreInput() {
       app.innerHTML = `
@@ -1168,7 +1177,7 @@
           </div>
           <p>${btn("クリア", "clearScore()", "soft")}</p>
           <h3>半荘メモ</h3><textarea id="scoreMemo">${esc(session.memo || "")}</textarea>
-          <div class="row" style="margin-top:14px;">${btn("保存", "saveScore()", "primary")}${btn("後で入力", "showSessionList()")}</div>
+          <div class="row" style="margin-top:14px;">${btn("保存", "saveScore()", "primary")}${btn("後で入力", "window.showSessionList()")}</div>
         </section>`;
     }
     renderScoreInput();
@@ -1176,21 +1185,21 @@
 
   window.showSessionList = function() {
     const ss = sessions().slice().reverse();
-    app.innerHTML = `<section class="card"><h2>半荘一覧</h2>${ss.length ? `<table><thead><tr><th>半荘</th><th>席順</th><th>収支</th><th>状態</th><th></th></tr></thead><tbody>${ss.map(s => `<tr><td>${esc(s.sessionLabel || s.date)}</td><td>東:${esc(s.initialSeats.east)}<br>南:${esc(s.initialSeats.south)}<br>西:${esc(s.initialSeats.west)}<br>北:${esc(s.initialSeats.north)}</td><td>${s.masudaScoreK == null ? "未入力" : `${s.masudaScoreK >= 0 ? "+" : ""}${s.masudaScoreK}`}</td><td>${esc(s.status)}</td><td>${s.status === "in_progress" ? btn("開く", `showRound('${s.id}')`) : btn("収支", `showScoreInput('${s.id}')`)} ${btn("削除", `deleteSession('${s.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ半荘がありません。</p>`}</section>`;
+    app.innerHTML = `<section class="card"><h2>半荘一覧</h2>${ss.length ? `<table><thead><tr><th>半荘</th><th>席順</th><th>収支</th><th>状態</th><th></th></tr></thead><tbody>${ss.map(s => `<tr><td>${esc(s.sessionLabel || s.date)}</td><td>東:${esc(s.initialSeats.east)}<br>南:${esc(s.initialSeats.south)}<br>西:${esc(s.initialSeats.west)}<br>北:${esc(s.initialSeats.north)}</td><td>${s.masudaScoreK == null ? "未入力" : `${s.masudaScoreK >= 0 ? "+" : ""}${s.masudaScoreK}`}</td><td>${esc(s.status)}</td><td>${s.status === "in_progress" ? btn("開く", `window.showRound('${s.id}')`) : btn("収支", `window.showScoreInput('${s.id}')`)} ${btn("削除", `deleteSession('${s.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ半荘がありません。</p>`}</section>`;
   };
 
   window.deleteSession = function(sessionId) {
     if (!confirm("この半荘と紐づく局ログを削除しますか？")) return;
     setSessions(sessions().filter(s => s.id !== sessionId));
     setLogs(logs().filter(l => l.sessionId !== sessionId));
-    showSessionList();
+    window.showSessionList();
   };
 
   window.showLogList = function() {
     const ls = logs().filter(l => l.isCanceled !== true).slice().reverse();
     app.innerHTML = `<section class="card"><h2>局ログ一覧</h2><p class="muted">取消済みログはこの一覧には表示しません。</p>${ls.length ? `<table><thead><tr><th>局</th><th>結果</th><th>点数</th><th>姿勢/タグ</th><th></th></tr></thead><tbody>${ls.map(l => `<tr><td>${esc(l.date)}<br>${esc(l.roundLabel)}<br>親:${esc(l.dealer)} 北:${esc(l.northPlayer)}</td><td>${esc(l.resultType)}<br>${esc(l.opponent || l.skipReason || "")}</td><td>${l.scoreDeltaPoint > 0 ? "+" : ""}${l.scoreDeltaPoint}</td><td>${esc(l.stance || "")}<br>${esc((l.subjectiveTags && l.subjectiveTags.length) ? l.subjectiveTags.join("・") : (l.subjectiveTag || ""))}</td><td>${btn("削除", `deleteLog('${l.id}')`, "danger")}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">まだ局ログがありません。</p>`}</section>`;
   };
-  window.deleteLog = function(logId) { setLogs(logs().filter(l => l.id !== logId)); showLogList(); };
+  window.deleteLog = function(logId) { setLogs(logs().filter(l => l.id !== logId)); window.showLogList(); };
 
   function csvEscape(v) {
     const s = Array.isArray(v) ? v.join("・") : String(v ?? "");
@@ -1252,7 +1261,7 @@
         <h2>更新操作</h2>
         <div class="grid two">
           ${btn("最新版を読み直す", "forceAppReload()", "primary")}
-          ${btn("システムへ", "showSystem()")}
+          ${btn("システムへ", "window.showSystem()")}
         </div>
         <p class="muted">この操作は、GitHubにファイルをアップロードする機能ではありません。GitHub上の index.html 等を更新済みの場合に、この端末で最新版を読み直します。</p>
       </section>
