@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.6.3" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.6.3" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.6.3" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.6.3" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.6.3" />
+  <link rel="manifest" href="./manifest.json?v=2.7.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.7.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.7.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.7.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.7.0" />
 
   <style>
     :root {
@@ -390,12 +390,36 @@
       .scoreBox { min-height: 58px; }
     }
 
+
+    .riichiBox {
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #f9fafb;
+      margin: 10px 0;
+    }
+    .riichiBox h3 { margin: 0 0 7px; font-size: 15px; }
+    .riichiToggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .riichiOn {
+      background: #111827 !important;
+      color: #fff !important;
+      border-color: #111827 !important;
+    }
+    .riichiOff {
+      background: #fff !important;
+    }
+
   </style>
 </head>
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.6.3</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.7.0</span></h1>
     <div class="sub">四人一抜け三麻・益田視点ログ</div>
   </header>
   <main id="app"></main>
@@ -409,8 +433,8 @@
 
 <script>
 (() => {
-  const APP_VERSION = "2.6.3";
-  const DATA_SCHEMA_VERSION = 6;
+  const APP_VERSION = "2.7.0";
+  const DATA_SCHEMA_VERSION = 7;
   const MEMBERS = ["益田", "水戸", "渋谷", "松林"];
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
   const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
@@ -506,12 +530,27 @@
     const sum = activeLogsForSession(sessionId).reduce((acc, l) => acc + Number(l.scoreDeltaPoint || 0), 0);
     return base + sum;
   }
+  function riichiStickDelta() {
+    return inputDraft.riichiStick ? -1000 : 0;
+  }
   function currentInputDelta(session) {
     const result = inputDraft.resultType;
-    if (result === "流局") return calcDrawDelta(inputDraft.tenpaiPlayers || [], participants(session));
-    if (!inputDraft.point) return 0;
+    const riichi = riichiStickDelta();
+    if (result === "流局") return calcDrawDelta(inputDraft.tenpaiPlayers || [], participants(session)) + riichi;
+    if (result === "被害なし") return riichi;
+    if (!inputDraft.point) return riichi;
     const sign = (result === "ロン放銃" || result === "ツモられ") ? -1 : 1;
-    return sign * Number(inputDraft.point || 0);
+    return sign * Number(inputDraft.point || 0) + riichi;
+  }
+  function renderRiichiToggle() {
+    return `<div class="riichiBox">
+      <h3>リーチ棒</h3>
+      <p class="muted">益田がこの局でリーチ棒を出した場合は「出した」を選択します。未入力・既存ログは0点扱いです。</p>
+      <div class="riichiToggle">
+        ${btn("出していない", "setRiichiStick(false)", inputDraft.riichiStick ? "riichiOff" : "selected")}
+        ${btn("出した（-1000点）", "setRiichiStick(true)", inputDraft.riichiStick ? "riichiOn" : "")}
+      </div>
+    </div>`;
   }
   function renderScoreCard(session, delta=null, label="今回の変動") {
     const current = masudaCurrentScore(session.id);
@@ -542,6 +581,7 @@
     const detail = [
       l.opponent ? esc(l.opponent) : "",
       Number(l.scoreDeltaPoint || 0) !== 0 ? formatDelta(l.scoreDeltaPoint) : "0点",
+      Number(l.riichiStickPoint || 0) ? `リーチ棒：-${Number(l.riichiStickPoint || 0)}点` : "",
       l.stance ? `姿勢：${esc(l.stance)}` : "",
       (l.subjectiveTags && l.subjectiveTags.length) ? `タグ：${esc(l.subjectiveTags.join("・"))}` : (l.subjectiveTag ? `タグ：${esc(l.subjectiveTag)}` : ""),
       l.tenpaiPlayers && l.tenpaiPlayers.length ? `テンパイ：${esc(l.tenpaiPlayers.join("・"))}` : ""
@@ -666,6 +706,9 @@
       opponent: "",
       scoreDeltaPoint: 0,
       scoreDeltaK: 0,
+      riichiStickPoint: 0,
+      riichiStick: false,
+      baseScoreDeltaPoint: 0,
       masudaDealer: r.east === "益田",
       opponentDealer: false,
       stance: "",
@@ -897,7 +940,7 @@
         ${btn("ツモ和了", `startInput('${session.id}','ツモ和了')`, "ok")}
         ${btn("ロン放銃", `startInput('${session.id}','ロン放銃')`, "danger")}
         ${btn("ツモられ", `startInput('${session.id}','ツモられ')`, "danger")}
-        ${btn("被害なし", `saveNoDamage('${session.id}')`, "accent")}
+        ${btn("被害なし", `startInput('${session.id}','被害なし')`, "accent")}
         ${btn("流局", `startInput('${session.id}','流局')`)}
         ${btn("入力できずスキップ", `saveSkip('${session.id}','入力困難')`, "soft")}
       </div>
@@ -905,7 +948,7 @@
   }
 
   window.startInput = function(sessionId, resultType) {
-    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, stance: "", tags: [], tenpaiPlayers: [] };
+    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, riichiStick: false, stance: "", tags: [], tenpaiPlayers: [] };
     renderInputForm();
   };
   window.selectOpponent = function(name) {
@@ -915,6 +958,10 @@
     if (session && inputDraft.point && !isPointAllowed(session, inputDraft.point)) {
       inputDraft.point = null;
     }
+    renderInputForm();
+  };
+  window.setRiichiStick = function(value) {
+    inputDraft.riichiStick = Boolean(value);
     renderInputForm();
   };
   window.selectPoint = function(point) {
@@ -971,23 +1018,25 @@
     const ps = participants(session);
     const needsOpponent = ["ロン和了", "ロン放銃", "ツモられ"].includes(result);
     const isDraw = result === "流局";
-    const deltaPreview = isDraw ? currentInputDelta(session) : (inputDraft.point ? currentInputDelta(session) : null);
+    const isNoDamage = result === "被害なし";
+    const deltaPreview = (isDraw || isNoDamage || inputDraft.point || inputDraft.riichiStick) ? currentInputDelta(session) : null;
     const scorePreview = renderScoreCard(session, deltaPreview);
     const opponentLabel = result === "ロン和了" ? "誰から？" : result === "ロン放銃" ? "誰へ？" : result === "ツモられ" ? "誰にツモられ？" : "";
     const pointLabel = result === "ツモ和了" ? "益田の総収入" : result === "ツモられ" ? "益田の支払い" : result === "ロン放銃" ? "失点" : "打点";
-    const ready = isDraw ? !!inputDraft.stance : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)) && inputDraft.stance);
+    const ready = isNoDamage ? true : (isDraw ? !!inputDraft.stance : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)) && inputDraft.stance));
     app.innerHTML = `
       <section class="card">
         ${renderCurrentStatus(session)}
         <h2>${esc(result)}</h2>
         ${summarizeLog(lastActiveLog(session.id))}
         ${renderTableView(session, true)}
+        ${renderRiichiToggle()}
         ${result === "ツモ和了" ? `<p>支払い者：${others.map(o => `<span class="pill">${esc(o)}</span>`).join(" ")}</p>` : ""}
         ${needsOpponent ? `<h3>${opponentLabel}</h3>${renderChoiceButtons(others, "selectOpponent", inputDraft.opponent)}` : ""}
-        ${isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point", session)}`}
+        ${isNoDamage ? `<p class="muted">被害なしは点数入力なしで保存します。リーチ棒を出した場合のみ-1000点を反映します。</p>` : (isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point", session)}`)}
         ${scorePreview}
-        <h3>対局姿勢</h3>${renderChoiceButtons(STANCES, "selectStance", inputDraft.stance)}
-        <h3>主観タグ（複数選択可）</h3>${renderSubjectiveTagButtons(tagListFor(result))}
+        ${isNoDamage ? "" : `<h3>対局姿勢</h3>${renderChoiceButtons(STANCES, "selectStance", inputDraft.stance)}`}
+        ${isNoDamage ? "" : `<h3>主観タグ（複数選択可）</h3>${renderSubjectiveTagButtons(tagListFor(result))}`}
         <div class="row" style="margin-top:14px;">
           ${btn("保存", `saveInput()`, ready ? "primary" : "")}
           ${btn("戻る", `window.showRound('${session.id}')`)}
@@ -1022,12 +1071,17 @@
     log.subjectiveTags = inputDraft.tags || [];
     log.subjectiveTag = log.subjectiveTags.join("・");
     log.tenpaiPlayers = inputDraft.tenpaiPlayers || [];
+    log.riichiStick = Boolean(inputDraft.riichiStick);
+    log.riichiStickPoint = log.riichiStick ? 1000 : 0;
     if (inputDraft.resultType === "流局") {
-      log.scoreDeltaPoint = calcDrawDelta(log.tenpaiPlayers, participants(session));
+      log.baseScoreDeltaPoint = calcDrawDelta(log.tenpaiPlayers, participants(session));
+    } else if (inputDraft.resultType === "被害なし") {
+      log.baseScoreDeltaPoint = 0;
     } else {
       const sign = (inputDraft.resultType === "ロン放銃" || inputDraft.resultType === "ツモられ") ? -1 : 1;
-      log.scoreDeltaPoint = sign * inputDraft.point;
+      log.baseScoreDeltaPoint = sign * Number(inputDraft.point || 0);
     }
+    log.scoreDeltaPoint = log.baseScoreDeltaPoint - log.riichiStickPoint;
     log.scoreDeltaK = log.scoreDeltaPoint / 1000;
     log.masudaDealer = isMasudaDealer(session);
     log.opponentDealer = log.opponent ? currentRoles(session).east === log.opponent : false;
@@ -1048,6 +1102,9 @@
     const session = sessions().find(s => s.id === sessionId);
     if (!session) return window.showHome();
     const log = baseLog(session, "被害なし");
+    log.baseScoreDeltaPoint = 0;
+    log.riichiStick = false;
+    log.riichiStickPoint = 0;
     log.scoreDeltaPoint = 0;
     log.scoreDeltaK = 0;
     log.stance = "";

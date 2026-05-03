@@ -1,11 +1,12 @@
 {
-  "appVersion": "2.6.3",
-  "dataSchemaVersion": 6,
+  "appVersion": "2.7.0",
+  "dataSchemaVersion": 7,
   "updatedAt": "2026-05-02",
   "notes": [
-    "直前局取消に必要なcurrentSnapshotを新規ログへ復旧",
-    "isCanceled/canceledAt/cancelReasonを新規ログへ明示",
-    "主要画面遷移呼び出しを安全化",
-    "主要フローの実行テストを追加実施"
+    "各局入力にリーチ棒ボタンを追加",
+    "リーチ棒を出した場合は点数移動から1000点を差し引く",
+    "既存ログのリーチ棒未入力は0点扱い",
+    "被害なしも確認画面を通すよう変更",
+    "CSVにリーチ棒関連列を追加"
   ]
 }
