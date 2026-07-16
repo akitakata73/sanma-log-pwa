@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=2.9.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=2.9.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=2.9.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=2.9.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=2.9.0" />
+  <link rel="manifest" href="./manifest.json?v=3.0.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=3.0.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=3.0.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=3.0.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=3.0.0" />
 
   <style>
     :root {
@@ -430,12 +430,201 @@
       margin-top: 6px;
     }
 
+
+    /* v3.0.0: 点棒移動を中心にした省スクロールUI */
+    .resultQuickGrid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .resultQuickGrid button {
+      min-height: 48px;
+      padding: 8px 3px;
+      font-size: 13px;
+    }
+    .compactInputCard {
+      padding: 11px 12px;
+      margin-top: 8px;
+    }
+    .compactInputHeader {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 8px;
+    }
+    .compactInputHeader .round {
+      font-size: 17px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+    .compactInputHeader .role {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+      line-height: 1.35;
+    }
+    .compactSection {
+      margin: 9px 0;
+    }
+    .compactSection h3 {
+      font-size: 13px;
+      margin: 0 0 5px;
+    }
+    .compactPointGrid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .compactPointGrid button {
+      min-height: 42px;
+      padding: 6px 2px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+    .compactOpponentGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .compactOpponentGrid button {
+      min-height: 43px;
+      padding: 7px 4px;
+    }
+    .compactSettlement {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin: 8px 0;
+    }
+    .compactToggleBox {
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #f9fafb;
+    }
+    .compactToggleBox .label {
+      font-size: 12px;
+      font-weight: 850;
+      margin-bottom: 5px;
+    }
+    .compactToggleGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .compactToggleGrid button {
+      min-height: 39px;
+      padding: 5px 3px;
+      font-size: 12px;
+    }
+    .compactKyotakuGrid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 4px;
+    }
+    .compactKyotakuGrid button {
+      min-height: 37px;
+      padding: 4px 1px;
+      font-size: 11px;
+      border-radius: 9px;
+    }
+    .compactScoreStrip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 5px;
+      margin: 8px 0;
+    }
+    .compactScoreCell {
+      min-width: 0;
+      padding: 7px 3px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      text-align: center;
+      background: #f9fafb;
+    }
+    .compactScoreCell .label {
+      display: block;
+      font-size: 9px;
+      color: var(--muted);
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+    .compactScoreCell .value {
+      display: block;
+      font-size: 15px;
+      line-height: 1.1;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .compactScoreCell.positive {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #047857;
+    }
+    .compactScoreCell.negative {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #b91c1c;
+    }
+    .compactScoreCell.zero {
+      background: #f3f4f6;
+    }
+    .inputActionBar {
+      position: sticky;
+      bottom: calc(78px + var(--safe-bottom));
+      z-index: 12;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 7px;
+      padding: 8px 0 4px;
+      background: linear-gradient(to bottom, rgba(246,247,249,0), rgba(246,247,249,.98) 25%);
+    }
+    .inputActionBar button {
+      min-height: 48px;
+    }
+    .compactDrawGrid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .compactDrawGrid button {
+      min-height: 43px;
+      padding: 6px 3px;
+    }
+    .scoreGrid {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+    .scoreBox {
+      min-height: 62px !important;
+      padding: 7px 3px !important;
+    }
+    .scoreValue {
+      font-size: 15px !important;
+    }
+    .scoreNote {
+      display: none;
+    }
+    @media (max-width: 430px) {
+      .scoreGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      }
+      .scoreBox {
+        min-height: 58px !important;
+      }
+      .compactPointGrid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
   </style>
 </head>
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v2.9.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v3.0.0</span></h1>
     <div class="sub">四人一抜け三麻・${esc(displayName(SELF_MEMBER))}視点ログ</div>
   </header>
   <main id="app"></main>
@@ -449,19 +638,12 @@
 
 <script>
 (() => {
-  const APP_VERSION = "2.9.0";
+  const APP_VERSION = "3.0.0";
   const DATA_SCHEMA_VERSION = 9;
   const SELF_MEMBER = "自分";
   const MEMBERS = ["自分", "A", "B", "C"];
   const KEY_MEMBER_NAMES = "sanma_log_pwa_member_names";
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
-  const STANCES = ["全ツッパ", "押し気味", "回し気味", "ベタ降り", "不明"];
-  const TAGS = {
-    win: ["押し成功", "リーチ判断成功", "鳴き判断成功", "カン判断成功", "枚数把握不安", "問題無し"],
-    dealIn: ["押しすぎ", "安手で押しすぎ", "テンパイ固執", "オリ判断ミス", "現物なし", "安全牌不足", "スジ引っかけ", "生牌切り", "ドラそば", "染め手見落とし", "待ち読みミス", "リーチ判断ミス", "鳴き判断ミス", "鳴き対応ミス", "カン判断ミス", "問題無し"],
-    tsumoLoss: ["速度負け", "ベタ降り中", "押し返し中", "テンパイ崩し", "問題無し"],
-    draw: ["形式テンパイ", "オリ完了", "テンパイ崩し", "回し打ち成功", "問題無し"]
-  };
   const KEY_SESSIONS = "sanma_log_pwa_sessions";
   const KEY_LOGS = "sanma_log_pwa_round_logs";
   const KEY_DRAFT = "sanma_log_pwa_draft";
@@ -573,12 +755,11 @@
     return sign * Number(inputDraft.point || 0) + kyotaku + riichi;
   }
   function renderRiichiToggle() {
-    return `<div class="riichiBox">
-      <h3>リーチ棒</h3>
-      <p class="muted">${esc(displayName(SELF_MEMBER))}がこの局でリーチ棒を出した場合は「出した」を選択します。未入力・既存ログは0点扱いです。</p>
-      <div class="riichiToggle">
-        ${btn("出していない", "setRiichiStick(false)", inputDraft.riichiStick ? "riichiOff" : "selected")}
-        ${btn("出した（-1000点）", "setRiichiStick(true)", inputDraft.riichiStick ? "riichiOn" : "")}
+    return `<div class="compactToggleBox">
+      <div class="label">リーチ棒</div>
+      <div class="compactToggleGrid">
+        ${btn("なし", "setRiichiStick(false)", inputDraft.riichiStick ? "" : "selected")}
+        ${btn("あり -1000", "setRiichiStick(true)", inputDraft.riichiStick ? "selected" : "")}
       </div>
     </div>`;
   }
@@ -589,13 +770,33 @@
     const canWin = result === "ロン和了" || result === "ツモ和了";
     if (!canWin) return "";
     const n = Number(inputDraft.kyotakuSticks || 0);
-    const buttons = [0,1,2,3,4].map(v => btn(`${v}本`, `setKyotakuSticks(${v})`, n === v ? "selected" : "")).join("");
-    return `<div class="kyotakuBox">
-      <h3>供託獲得</h3>
-      <p class="muted">${esc(displayName(SELF_MEMBER))}が和了時に獲得した供託リーチ棒の本数です。1本あたり+1000点として今回変動に反映します。</p>
-      <div class="kyotakuGrid">
+    const buttons = [0,1,2,3,4].map(v => btn(`${v}`, `setKyotakuSticks(${v})`, n === v ? "selected" : "")).join("");
+    return `<div class="compactToggleBox">
+      <div class="label">供託獲得（本）</div>
+      <div class="compactKyotakuGrid">
         ${buttons}
-        ${btn("手入力", "setKyotakuSticksCustom()", "soft")}
+        ${btn("他", "setKyotakuSticksCustom()", "soft")}
+      </div>
+    </div>`;
+  }
+  function renderCompactScoreStrip(session, delta=null) {
+    const current = masudaCurrentScore(session.id);
+    const hasDelta = delta !== null && delta !== undefined;
+    const d = hasDelta ? Number(delta || 0) : 0;
+    const after = current + d;
+    const tone = d > 0 ? "positive" : d < 0 ? "negative" : "zero";
+    return `<div class="compactScoreStrip">
+      <div class="compactScoreCell">
+        <span class="label">現在</span>
+        <span class="value">${formatScore(current)}</span>
+      </div>
+      <div class="compactScoreCell ${hasDelta ? tone : "zero"}">
+        <span class="label">今回</span>
+        <span class="value">${hasDelta ? formatDelta(d) : "未選択"}</span>
+      </div>
+      <div class="compactScoreCell ${hasDelta ? tone : "zero"}">
+        <span class="label">反映後</span>
+        <span class="value">${hasDelta ? formatScore(after) : "未確定"}</span>
       </div>
     </div>`;
   }
@@ -820,26 +1021,25 @@
   function renderPointButtons(varName="point", session=null) {
     const allowed = session ? allowedPointsForCurrentInput(session) : POINTS;
     const needsOpponent = ["ロン放銃", "ツモられ"].includes(inputDraft.resultType);
-    const help = needsOpponent && !inputDraft.opponent
-      ? `<div class="pointHelp">先に相手を選ぶと、使える点数だけ押せるようになります。</div>`
-      : `<div class="pointHelp">この局面で使わない点数は灰色で表示し、選択できません。</div>`;
+    const note = needsOpponent && !inputDraft.opponent
+      ? `<p class="pointHelp">先に相手を選択してください。</p>`
+      : "";
     const buttons = POINTS.map(p => {
       const disabled = !allowed.includes(p);
       const cls = inputDraft[varName] === p ? "selected" : disabled ? "pointDisabled" : "";
-      return btn(`${p}点`, `selectPoint(${p})`, cls, disabled);
+      return btn(`${p}`, `selectPoint(${p})`, cls, disabled);
     }).join("");
     const irregular = inputDraft.isIrregularPoint
-      ? `<div class="notice">イレギュラー点数：<strong>${inputDraft.point}点</strong></div>`
+      ? `<div class="notice">手入力：<strong>${inputDraft.point}点</strong></div>`
       : "";
-    return `${help}<div class="grid three">${buttons}</div><div class="row" style="margin-top:8px;">${btn("イレギュラー入力", "selectIrregularPoint()", "soft")}${inputDraft.isIrregularPoint ? btn("通常点数に戻す", "clearIrregularPoint()") : ""}</div>${irregular}`;
+    return `${note}<div class="compactPointGrid">${buttons}</div>
+      <div class="row" style="margin-top:6px;">
+        ${btn("イレギュラー", "selectIrregularPoint()", "soft")}
+        ${inputDraft.isIrregularPoint ? btn("解除", "clearIrregularPoint()") : ""}
+      </div>${irregular}`;
   }
   function renderChoiceButtons(list, fnName, current="") {
     return `<div class="grid three">${list.map(x => btn(x, `${fnName}('${x}')`, current === x ? "selected" : "")).join("")}</div>`;
-  }
-  function renderSubjectiveTagButtons(list) {
-    const selected = inputDraft.tags || [];
-    if (!list.length) return `<p class="muted">この結果では主観タグ入力はありません。</p>`;
-    return `<p class="muted">複数選択できます。もう一度押すと解除します。</p><div class="grid three">${list.map(x => btn(x, `toggleSubjectiveTag('${x}')`, selected.includes(x) ? "selected" : "")).join("")}</div>`;
   }
 
   window.showHome = function() {
@@ -849,7 +1049,7 @@
     app.innerHTML = `
       <section class="card">
         <h2>ホーム</h2>
-        <p class="muted">局ごとに、${esc(displayName(SELF_MEMBER))}視点の結果・点数移動・対局姿勢を記録します。</p>
+        <p class="muted">局ごとに、${esc(displayName(SELF_MEMBER))}の点棒移動を短時間で記録します。</p>
         <div class="grid two">
           ${btn("新しい半荘", "window.showNewSession()", "primary")}
           ${btn(active ? "進行中の半荘" : "進行中なし", "showCurrentOrNew()", active ? "accent" : "soft")}
@@ -959,8 +1159,8 @@
         </div>
         <div class="buttonNote">直前局の取消は、同一半荘の最新ログ1件のみ対象です。通常CSVには取消済みログを出力しません。</div>
       </section>
-      ${renderTableView(session)}
       ${masudaJoined ? renderResultSelect(session) : renderMasudaAbsent(session)}
+      ${renderTableView(session)}
       <section class="card">
         <h2>半荘操作</h2>
         <div class="grid two">
@@ -983,22 +1183,22 @@
   }
 
   function renderResultSelect(session) {
-    return `<section class="card">
-      <h2>結果を選択</h2>
-      <div class="grid two">
+    return `<section class="card compactInputCard">
+      <h2 style="margin-bottom:8px;">結果入力</h2>
+      <div class="resultQuickGrid">
         ${btn("ロン和了", `startInput('${session.id}','ロン和了')`, "ok")}
         ${btn("ツモ和了", `startInput('${session.id}','ツモ和了')`, "ok")}
         ${btn("ロン放銃", `startInput('${session.id}','ロン放銃')`, "danger")}
         ${btn("ツモられ", `startInput('${session.id}','ツモられ')`, "danger")}
         ${btn("被害なし", `startInput('${session.id}','被害なし')`, "accent")}
         ${btn("流局", `startInput('${session.id}','流局')`)}
-        ${btn("入力できずスキップ", `saveSkip('${session.id}','入力困難')`, "soft")}
+        ${btn("スキップ", `saveSkip('${session.id}','入力困難')`, "soft")}
       </div>
     </section>`;
   }
 
   window.startInput = function(sessionId, resultType) {
-    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, riichiStick: false, kyotakuSticks: 0, stance: "", tags: [], tenpaiPlayers: [] };
+    inputDraft = { sessionId, resultType, opponent: "", point: null, isIrregularPoint: false, riichiStick: false, kyotakuSticks: 0, tenpaiPlayers: [] };
     renderInputForm();
   };
   window.selectOpponent = function(name) {
@@ -1054,13 +1254,6 @@
     inputDraft.isIrregularPoint = false;
     renderInputForm();
   };
-  window.selectStance = function(stance) { inputDraft.stance = stance; renderInputForm(); };
-  window.toggleSubjectiveTag = function(tag) {
-    const arr = inputDraft.tags || [];
-    if (arr.includes(tag)) inputDraft.tags = arr.filter(x => x !== tag);
-    else inputDraft.tags = [...arr, tag];
-    renderInputForm();
-  };
   window.toggleTenpai = function(name) {
     const arr = inputDraft.tenpaiPlayers || [];
     if (arr.includes(name)) inputDraft.tenpaiPlayers = arr.filter(x => x !== name);
@@ -1068,56 +1261,82 @@
     renderInputForm();
   };
 
-  function tagListFor(resultType) {
-    if (resultType === "ロン和了" || resultType === "ツモ和了") return TAGS.win;
-    if (resultType === "ロン放銃") return TAGS.dealIn;
-    if (resultType === "ツモられ") return TAGS.tsumoLoss;
-    if (resultType === "流局") return TAGS.draw;
-    return ["不明"];
-  }
 
   function renderInputForm() {
     const session = sessions().find(s => s.id === inputDraft.sessionId);
     if (!session) return window.showHome();
+
     const result = inputDraft.resultType;
     const others = opponentOptions(session);
     const ps = participants(session);
     const needsOpponent = ["ロン和了", "ロン放銃", "ツモられ"].includes(result);
     const isDraw = result === "流局";
     const isNoDamage = result === "被害なし";
-    const deltaPreview = (isDraw || isNoDamage || inputDraft.point || inputDraft.riichiStick) ? currentInputDelta(session) : null;
-    const scorePreview = renderScoreCard(session, deltaPreview);
-    const opponentLabel = result === "ロン和了" ? "誰から？" : result === "ロン放銃" ? "誰へ？" : result === "ツモられ" ? "誰にツモられ？" : "";
-    const pointLabel = result === "ツモ和了" ? "自分の総収入" : result === "ツモられ" ? "自分の支払い" : result === "ロン放銃" ? "失点" : "打点";
-    const ready = isNoDamage ? true : (isDraw ? !!inputDraft.stance : ((!needsOpponent || inputDraft.opponent) && inputDraft.point && (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)) && inputDraft.stance));
+    const hasPointSelection = Boolean(inputDraft.point) || isDraw || isNoDamage;
+    const deltaPreview = (hasPointSelection || inputDraft.riichiStick || Number(inputDraft.kyotakuSticks || 0) > 0)
+      ? currentInputDelta(session)
+      : null;
+    const opponentLabel = result === "ロン和了" ? "ロン相手" : result === "ロン放銃" ? "放銃相手" : "ツモ和了者";
+    const pointLabel = result === "ツモ和了" ? "総収入" : result === "ツモられ" ? "支払い" : result === "ロン放銃" ? "失点" : "和了点";
+    const ready = isNoDamage || isDraw
+      ? true
+      : ((!needsOpponent || inputDraft.opponent) &&
+         inputDraft.point &&
+         (inputDraft.isIrregularPoint || isPointAllowed(session, inputDraft.point)));
+
+    const roles = currentRoles(session);
     app.innerHTML = `
-      <section class="card">
-        ${renderCurrentStatus(session)}
-        <h2>${esc(result)}</h2>
-        ${summarizeLog(lastActiveLog(session.id))}
-        ${renderTableView(session, true)}
-        ${renderRiichiToggle()}
-        ${renderKyotakuInput(result)}
-        ${result === "ツモ和了" ? `<p>支払い者：${others.map(o => `<span class="pill">${esc(o)}</span>`).join(" ")}</p>` : ""}
-        ${needsOpponent ? `<h3>${opponentLabel}</h3>${renderChoiceButtons(others, "selectOpponent", inputDraft.opponent)}` : ""}
-        ${isNoDamage ? `<p class="muted">被害なしは点数入力なしで保存します。リーチ棒を出した場合のみ-1000点を反映します。</p>` : (isDraw ? renderDrawSection(ps) : `<h3>${pointLabel}</h3>${renderPointButtons("point", session)}`)}
-        ${scorePreview}
-        ${isNoDamage ? "" : `<h3>対局姿勢</h3>${renderChoiceButtons(STANCES, "selectStance", inputDraft.stance)}`}
-        ${isNoDamage ? "" : `<h3>主観タグ（複数選択可）</h3>${renderSubjectiveTagButtons(tagListFor(result))}`}
-        <div class="row" style="margin-top:14px;">
-          ${btn("保存", `saveInput()`, ready ? "primary" : "")}
-          ${btn("戻る", `window.showRound('${session.id}')`)}
+      <section class="card compactInputCard">
+        <div class="compactInputHeader">
+          <div>
+            <div class="round">${esc(roundLabel(session))}　${esc(result)}</div>
+          </div>
+          <div class="role">
+            親：${esc(displayName(roles.east))}<br>
+            ${esc(displayName(SELF_MEMBER))}：${esc(masudaRole(session))}
+          </div>
+        </div>
+
+        ${needsOpponent ? `
+          <div class="compactSection">
+            <h3>${opponentLabel}</h3>
+            <div class="compactOpponentGrid">
+              ${others.map(x => btn(displayName(x), `selectOpponent('${x}')`, inputDraft.opponent === x ? "selected" : "")).join("")}
+            </div>
+          </div>` : ""}
+
+        ${isNoDamage ? `
+          <div class="compactSection">
+            <p class="muted">点数移動なし。リーチ棒を出した場合だけ「あり」を選択します。</p>
+          </div>` : isDraw ? `
+          <div class="compactSection">
+            ${renderDrawSection(ps)}
+          </div>` : `
+          <div class="compactSection">
+            <h3>${pointLabel}</h3>
+            ${renderPointButtons("point", session)}
+          </div>`}
+
+        <div class="compactSettlement">
+          ${renderRiichiToggle()}
+          ${renderKyotakuInput(result)}
+        </div>
+
+        ${renderCompactScoreStrip(session, deltaPreview)}
+
+        <div class="inputActionBar">
+          ${btn("保存して次へ", "saveInput()", ready ? "primary" : "", !ready)}
+          ${btn("戻る", `window.showRound('${session.id}')`, "soft")}
         </div>
       </section>`;
-    if (!ready) {
-      const buttons = app.querySelectorAll("button");
-      const saveBtn = Array.from(buttons).find(b => b.textContent === "保存");
-      if (saveBtn) saveBtn.disabled = true;
-    }
   }
 
   function renderDrawSection(ps) {
-    return `<h3>テンパイ者を選択</h3><p class="muted">参加者3人から選択。全員テンパイ・全員ノーテンは点数移動0。</p><div class="grid three">${ps.map(p => btn(p, `toggleTenpai('${p}')`, (inputDraft.tenpaiPlayers || []).includes(p) ? "selected" : "")).join("")}</div>`;
+    return `<h3>テンパイ者</h3>
+      <p class="muted">0人＝全員ノーテン、3人＝全員テンパイ</p>
+      <div class="compactDrawGrid">
+        ${ps.map(p => btn(displayName(p), `toggleTenpai('${p}')`, (inputDraft.tenpaiPlayers || []).includes(p) ? "selected" : "")).join("")}
+      </div>`;
   }
   function calcDrawDelta(tenpaiPlayers, ps) {
     const t = tenpaiPlayers || [];
@@ -1134,9 +1353,9 @@
     if (!session) return window.showHome();
     const log = baseLog(session, inputDraft.resultType);
     log.opponent = inputDraft.opponent || "";
-    log.stance = inputDraft.stance || "";
-    log.subjectiveTags = inputDraft.tags || [];
-    log.subjectiveTag = log.subjectiveTags.join("・");
+    log.stance = "";
+    log.subjectiveTags = [];
+    log.subjectiveTag = "";
     log.tenpaiPlayers = inputDraft.tenpaiPlayers || [];
     log.riichiStick = Boolean(inputDraft.riichiStick);
     log.riichiStickPoint = log.riichiStick ? 1000 : 0;
