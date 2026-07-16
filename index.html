@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="三麻ログ" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="manifest" href="./manifest.json?v=3.0.0" />
-  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=3.0.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=3.0.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=3.0.0" />
-  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=3.0.0" />
+  <link rel="manifest" href="./manifest.json?v=3.1.0" />
+  <link rel="apple-touch-icon" href="./sanma_v140_apple_touch_icon.png?v=3.1.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./sanma_v140_icon_192.png?v=3.1.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./sanma_v140_icon_512.png?v=3.1.0" />
+  <link rel="shortcut icon" href="./sanma_v140_favicon.png?v=3.1.0" />
 
   <style>
     :root {
@@ -624,7 +624,7 @@
 <body>
 <div class="appShell">
 <header>
-    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v3.0.0</span></h1>
+    <h1>三麻ログPWA <span style="font-size:12px;color:#6b7280;">v3.1.0</span></h1>
     <div class="sub">四人一抜け三麻・${esc(displayName(SELF_MEMBER))}視点ログ</div>
   </header>
   <main id="app"></main>
@@ -638,11 +638,13 @@
 
 <script>
 (() => {
-  const APP_VERSION = "3.0.0";
+  const APP_VERSION = "3.1.0";
   const DATA_SCHEMA_VERSION = 9;
   const SELF_MEMBER = "自分";
   const MEMBERS = ["自分", "A", "B", "C"];
   const KEY_MEMBER_NAMES = "sanma_log_pwa_member_names";
+  const NAME_MASK = 723;
+  const DEFAULT_NAME_DATA = {"自分":[29721,30691],"A":[28391,24811],"B":[27864,36580],"C":[26029,25924]};
   const POINTS = [1000,2000,3000,4000,6000,8000,9000,12000,16000,18000,24000,32000,36000,48000,64000,96000];
   const KEY_SESSIONS = "sanma_log_pwa_sessions";
   const KEY_LOGS = "sanma_log_pwa_round_logs";
@@ -661,16 +663,86 @@
   function logs() { return load(KEY_LOGS, []); }
   function setSessions(v) { save(KEY_SESSIONS, v); }
   function setLogs(v) { save(KEY_LOGS, v); }
+  function decodeDisplayName(values) {
+    return (values || []).map(v => String.fromCharCode(Number(v) ^ NAME_MASK)).join("");
+  }
+  function defaultMemberNames() {
+    return Object.fromEntries(
+      MEMBERS.map(key => [key, decodeDisplayName(DEFAULT_NAME_DATA[key])])
+    );
+  }
+  function rawMemberNameSettings() {
+    return load(KEY_MEMBER_NAMES, null);
+  }
   function memberNameSettings() {
-    return load(KEY_MEMBER_NAMES, { "自分": "自分", "A": "A", "B": "B", "C": "C" });
+    const defaults = defaultMemberNames();
+    const stored = rawMemberNameSettings();
+    if (!stored || typeof stored !== "object") return defaults;
+
+    let changed = false;
+    const merged = {};
+    MEMBERS.forEach(key => {
+      const value = String(stored[key] || "").trim();
+      if (!value || value === key) {
+        merged[key] = defaults[key];
+        changed = true;
+      } else {
+        merged[key] = value;
+      }
+    });
+    if (changed) setMemberNameSettings(merged);
+    return merged;
   }
   function setMemberNameSettings(v) { save(KEY_MEMBER_NAMES, v); }
+  function canonicalMember(name) {
+    const raw = String(name || "");
+    if (MEMBERS.includes(raw)) return raw;
+
+    const defaults = defaultMemberNames();
+    const stored = rawMemberNameSettings() || {};
+    for (const key of MEMBERS) {
+      if (raw === defaults[key] || raw === stored[key]) return key;
+    }
+    return raw;
+  }
   function displayName(name) {
+    const key = canonicalMember(name);
     const m = memberNameSettings();
-    return m[name] || name || "";
+    return m[key] || name || "";
   }
   function displayNameList(list) {
     return (list || []).map(x => displayName(x)).join("・");
+  }
+  function normalizeMemberIdentifiers() {
+    const currentSessions = sessions();
+    const normalizedSessions = currentSessions.map(s => ({
+      ...s,
+      seats: (s.seats || []).map(canonicalMember),
+      initialSeats: s.initialSeats ? {
+        east: canonicalMember(s.initialSeats.east),
+        south: canonicalMember(s.initialSeats.south),
+        west: canonicalMember(s.initialSeats.west),
+        north: canonicalMember(s.initialSeats.north)
+      } : s.initialSeats
+    }));
+
+    const currentLogs = logs();
+    const normalizedLogs = currentLogs.map(l => ({
+      ...l,
+      dealer: canonicalMember(l.dealer),
+      northPlayer: canonicalMember(l.northPlayer),
+      participants: (l.participants || []).map(canonicalMember),
+      opponent: canonicalMember(l.opponent),
+      tenpaiPlayers: (l.tenpaiPlayers || []).map(canonicalMember)
+    }));
+
+    if (JSON.stringify(normalizedSessions) !== JSON.stringify(currentSessions)) {
+      setSessions(normalizedSessions);
+    }
+    if (JSON.stringify(normalizedLogs) !== JSON.stringify(currentLogs)) {
+      setLogs(normalizedLogs);
+    }
+    memberNameSettings();
   }
 
   function id(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -1637,11 +1709,11 @@
     app.innerHTML = `
       <section class="card">
         <h2>表示名設定</h2>
-        <p class="muted">公開コード上は「自分 / A / B / C」の仮名で管理し、この端末だけに表示名を保存します。GitHubにはここで入力した表示名は送信されません。</p>
-        <label>自分<input id="name_self" value="${esc(names["自分"] || "自分")}"></label>
-        <label>A<input id="name_a" value="${esc(names["A"] || "A")}"></label>
-        <label>B<input id="name_b" value="${esc(names["B"] || "B")}"></label>
-        <label>C<input id="name_c" value="${esc(names["C"] || "C")}"></label>
+        <p class="muted">対局画面では固有名詞を表示します。入力内容はこの端末内に保存され、GitHubへ送信されません。</p>
+        <label>本人<input id="name_self" value="${esc(names["自分"] || "")}"></label>
+        <label>対局者1<input id="name_a" value="${esc(names["A"] || "")}"></label>
+        <label>対局者2<input id="name_b" value="${esc(names["B"] || "")}"></label>
+        <label>対局者3<input id="name_c" value="${esc(names["C"] || "")}"></label>
         <div class="grid two" style="margin-top:12px;">
           ${btn("保存", "saveNameSettings()", "primary")}
           ${btn("システムへ", "showSystem()")}
@@ -1650,12 +1722,13 @@
     `;
   };
   window.saveNameSettings = function() {
+    const defaults = defaultMemberNames();
     const get = id => (document.getElementById(id)?.value || "").trim();
     setMemberNameSettings({
-      "自分": get("name_self") || "自分",
-      "A": get("name_a") || "A",
-      "B": get("name_b") || "B",
-      "C": get("name_c") || "C"
+      "自分": get("name_self") || defaults["自分"],
+      "A": get("name_a") || defaults["A"],
+      "B": get("name_b") || defaults["B"],
+      "C": get("name_c") || defaults["C"]
     });
     alert("表示名を保存しました。");
     window.showSystem();
@@ -1678,8 +1751,8 @@
       </section>
       <section class="card">
         <h2>表示名</h2>
-        <p class="muted">公開コード上は仮名のまま、使用端末だけで表示名を変更します。</p>
-        <p>自分：${esc(displayName("自分"))}　A：${esc(displayName("A"))}　B：${esc(displayName("B"))}　C：${esc(displayName("C"))}</p>
+        <p class="muted">対局画面では以下の固有名詞を表示します。表示名はこの端末で変更できます。</p>
+        <p>${MEMBERS.map(key => `<span class="pill">${esc(displayName(key))}</span>`).join(" ")}</p>
         <div class="grid two">${btn("表示名を設定", "showNameSettings()", "primary")}</div>
       </section>
       <section class="card">
@@ -1692,6 +1765,7 @@
   };
 
 
+  normalizeMemberIdentifiers();
   window.showHome();
 })();
 </script>
